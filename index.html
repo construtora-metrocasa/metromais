@@ -158,14 +158,24 @@
   /* ===== Painel (iframe em tela cheia) ===== */
   #viewDashboard { position: fixed; inset: 0; background: #fff; }
   #iframeDashboard { width: 100%; height: 100%; border: 0; display: block; }
+  .botoesPainel {
+    position: fixed; top: 14px; right: 14px; z-index: 10;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .botaoSair, .botaoAlt {
+    width: auto; margin: 0; padding: 9px 18px; font-size: 12.5px; border-radius: 999px;
+    font-weight: 800; letter-spacing: .04em; text-transform: uppercase; border: none; cursor: pointer;
+  }
   .botaoSair {
-    position: fixed; top: 14px; right: 14px; z-index: 10; width: auto;
-    padding: 9px 18px; font-size: 12.5px; border-radius: 999px;
     background: linear-gradient(160deg, var(--red), var(--red-deep)); color: #fff;
-    font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
     box-shadow: 0 10px 24px rgba(236,28,36,.35);
   }
   .botaoSair:hover { filter: brightness(1.08); }
+  .botaoAlt {
+    background: #fff; color: var(--red-deep);
+    box-shadow: 0 10px 24px rgba(20,8,8,.18);
+  }
+  .botaoAlt:hover { background: var(--paper-2); }
 </style>
 </head>
 <body>
@@ -230,6 +240,7 @@
       <div class="card-body">
         <h1>Sem painel vinculado</h1>
         <p class="lead">Seu acesso funcionou, porém ainda não existe um painel configurado para o seu usuário. Fale com o RH/Comercial.</p>
+        <button class="btn" type="button" id="btnVerPerformanceSemAcesso">Ver Performance Comercial</button>
         <a href="#" class="link-secundario" id="linkSairSemAcesso">Sair</a>
       </div>
     </div>
@@ -237,7 +248,10 @@
 
   <!-- TELA: DASHBOARD (iframe em tela cheia, nunca navega pra outra URL) -->
   <div id="viewDashboard" hidden>
-    <button class="botaoSair" id="btnSairDashboard">Sair</button>
+    <div class="botoesPainel">
+      <button class="botaoAlt" id="btnAlternarPainel">Performance Comercial</button>
+      <button class="botaoSair" id="btnSairDashboard">Sair</button>
+    </div>
     <iframe id="iframeDashboard" title="Painel"></iframe>
   </div>
 
@@ -250,6 +264,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Painel compartilhado, disponível pra todo mundo logado, independente do
+// painel pessoal de cada um (ou de nem ter um cadastrado).
+const PAINEL_PERFORMANCE_COMERCIAL = 'https://app.powerbi.com/view?r=eyJrIjoiNThjMGFhZGUtZTIwMS00MWI4LTlkZmQtZTNhNzEwOTg0YzYyIiwidCI6ImM3NGViY2JkLWE4MGYtNDYwYy1hMDUzLTEwZDViNmY1ZWQwNSJ9';
+
 const telas = {
   login: document.getElementById('viewLogin'),
   trocarSenha: document.getElementById('viewTrocarSenha'),
@@ -257,10 +275,42 @@ const telas = {
   dashboard: document.getElementById('viewDashboard'),
 };
 
+let paginaPropria = null;    // pagina_acesso da pessoa logada (ou null se não tiver)
+let mostrandoPerformance = false;
+
 function mostrarTela(nome) {
   Object.keys(telas).forEach((chave) => {
     telas[chave].hidden = (chave !== nome);
   });
+}
+
+function atualizarBotaoAlternar() {
+  const btn = document.getElementById('btnAlternarPainel');
+  btn.textContent = mostrandoPerformance ? 'Meu painel' : 'Performance Comercial';
+}
+
+function abrirPerformanceComercial() {
+  mostrandoPerformance = true;
+  document.getElementById('iframeDashboard').src = PAINEL_PERFORMANCE_COMERCIAL;
+  atualizarBotaoAlternar();
+  mostrarTela('dashboard');
+}
+
+function alternarPainel() {
+  if (mostrandoPerformance) {
+    mostrandoPerformance = false;
+    if (paginaPropria) {
+      document.getElementById('iframeDashboard').src = paginaPropria;
+      mostrarTela('dashboard');
+    } else {
+      // pessoa não tem painel próprio — volta pra tela "sem acesso"
+      document.getElementById('iframeDashboard').src = 'about:blank';
+      mostrarTela('semAcesso');
+    }
+  } else {
+    abrirPerformanceComercial();
+  }
+  atualizarBotaoAlternar();
 }
 
 async function carregarPerfilEDirecionar(userId) {
@@ -278,7 +328,11 @@ async function carregarPerfilEDirecionar(userId) {
     mostrarTela('trocarSenha');
     return;
   }
-  if (!perfil.pagina_acesso) {
+
+  paginaPropria = perfil.pagina_acesso || null;
+  mostrandoPerformance = false;
+
+  if (!paginaPropria) {
     mostrarTela('semAcesso');
     return;
   }
@@ -287,7 +341,8 @@ async function carregarPerfilEDirecionar(userId) {
   // endereço do navegador continua mostrando só esta página, nunca a
   // URL do painel. O link só é buscado agora, depois do login, e só
   // para o usuário autenticado dono dele.
-  document.getElementById('iframeDashboard').src = perfil.pagina_acesso;
+  document.getElementById('iframeDashboard').src = paginaPropria;
+  atualizarBotaoAlternar();
   mostrarTela('dashboard');
 }
 
@@ -296,6 +351,8 @@ async function sair() {
   document.getElementById('iframeDashboard').src = 'about:blank';
   document.getElementById('email').value = '';
   document.getElementById('senha').value = '';
+  paginaPropria = null;
+  mostrandoPerformance = false;
   mostrarTela('login');
 }
 
@@ -389,6 +446,10 @@ document.getElementById('trocaForm').addEventListener('submit', async (e) => {
 document.getElementById('linkSairTroca').addEventListener('click', (e) => { e.preventDefault(); sair(); });
 document.getElementById('linkSairSemAcesso').addEventListener('click', (e) => { e.preventDefault(); sair(); });
 document.getElementById('btnSairDashboard').addEventListener('click', () => { sair(); });
+
+// ---- Performance Comercial (disponível pra todo mundo logado) ----
+document.getElementById('btnAlternarPainel').addEventListener('click', () => { alternarPainel(); });
+document.getElementById('btnVerPerformanceSemAcesso').addEventListener('click', () => { abrirPerformanceComercial(); });
 </script>
 </body>
 </html>
