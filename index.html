@@ -240,7 +240,7 @@
       <div class="card-body">
         <h1>Sem painel vinculado</h1>
         <p class="lead">Seu acesso funcionou, porém ainda não existe um painel configurado para o seu usuário. Fale com o RH/Comercial.</p>
-        <button class="btn" type="button" id="btnVerPerformanceSemAcesso">Ver Performance Comercial</button>
+        <button class="btn" type="button" id="btnVerPerformanceSemAcesso">Ver Estoque</button>
         <a href="#" class="link-secundario" id="linkSairSemAcesso">Sair</a>
       </div>
     </div>
@@ -249,7 +249,7 @@
   <!-- TELA: DASHBOARD (iframe em tela cheia, nunca navega pra outra URL) -->
   <div id="viewDashboard" hidden>
     <div class="botoesPainel">
-      <button class="botaoAlt" id="btnAlternarPainel">Performance Comercial</button>
+      <button class="botaoAlt" id="btnAlternarPainel">Estoque</button>
       <button class="botaoSair" id="btnSairDashboard">Sair</button>
     </div>
     <iframe id="iframeDashboard" title="Painel"></iframe>
@@ -286,7 +286,7 @@ function mostrarTela(nome) {
 
 function atualizarBotaoAlternar() {
   const btn = document.getElementById('btnAlternarPainel');
-  btn.textContent = mostrandoPerformance ? 'Meu painel' : 'Performance Comercial';
+  btn.textContent = mostrandoPerformance ? 'Meu painel' : 'Estoque';
 }
 
 function abrirPerformanceComercial() {
@@ -447,7 +447,7 @@ document.getElementById('linkSairTroca').addEventListener('click', (e) => { e.pr
 document.getElementById('linkSairSemAcesso').addEventListener('click', (e) => { e.preventDefault(); sair(); });
 document.getElementById('btnSairDashboard').addEventListener('click', () => { sair(); });
 
-// ---- Performance Comercial (disponível pra todo mundo logado) ----
+// ---- Estoque (disponível pra todo mundo logado) ----
 document.getElementById('btnAlternarPainel').addEventListener('click', () => { alternarPainel(); });
 document.getElementById('btnVerPerformanceSemAcesso').addEventListener('click', () => { abrirPerformanceComercial(); });
 </script>
