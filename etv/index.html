@@ -110,6 +110,21 @@
   .canalbar .chips{margin-bottom:0}
   .chip.can.on{background:var(--gold);border-color:var(--gold);color:#3B2E00}
   .chip.can.all.on{background:var(--red);border-color:var(--red);color:#fff}
+  .gteam{margin:12px 14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .gteam:last-child{margin-bottom:14px}
+  .gth{display:flex;align-items:center;gap:9px;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--line)}
+  .gth .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+  .gth .gn{font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px}
+  .gth .gt{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+  .gth .gc{margin-left:auto;background:#fff;border:1px solid var(--line);border-radius:999px;font-size:10px;font-weight:700;color:var(--ink-2);padding:2px 9px}
+  #panel3 table{width:100%;border-collapse:collapse}
+  #panel3 thead th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:8px 14px;border-bottom:1px solid var(--line)}
+  #panel3 tbody td{padding:9px 14px;font-size:13px;border-top:1px solid var(--line)}
+  #panel3 tbody td.ap{font-family:'Sora',sans-serif;font-weight:700}
+  #panel3 tbody td.fn{color:var(--ink-2);font-size:12px}
+  #panel3 tbody td.em{font-size:12px;color:var(--muted)}
+  #panel3 tbody td.em a{color:var(--red-deep);text-decoration:none}
+  #panel3 tbody tr:hover{background:var(--red-soft)}
   .nomatch{margin-top:14px;border:1px dashed #E0902F;background:var(--warn-bg);border-radius:12px;padding:14px 16px}
   .nomatch h4{font-family:'Sora',sans-serif;font-size:13px;color:var(--warn);margin-bottom:8px}
   .nomatch .row{font-size:12px;color:var(--ink-2);padding:3px 0;border-top:1px solid rgba(224,144,47,.25)}
@@ -136,6 +151,7 @@
   <div class="tabs" id="tabs">
     <button class="tab on" data-t="estrutura">Estrutura</button>
     <button class="tab" data-t="p2">Canal de Distribuição</button>
+    <button class="tab" data-t="blip">Painel BLIP</button>
   </div>
 
   <div id="view-estrutura">
@@ -150,6 +166,13 @@
   <div class="chips" id="chips2"></div>
   <div class="canalbar" id="canalbar"></div>
   <div id="panel2"></div>
+  </div>
+
+  <div id="view-blip" style="display:none">
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="search3" placeholder="Buscar atendente, nome, e-mail, gerente ou superintendência…" autocomplete="off"></div>
+  <div class="srcs" id="srcs3"></div>
+  <div class="chips" id="chips3"></div>
+  <div id="panel3"></div>
   </div>
 
   <footer><b>Metrocasa · Marketing</b> — Estrutura e Canal de Distribuição · Superintendente › Gerente › Coordenador › Consultor</footer>
@@ -393,6 +416,66 @@ function todosCanais(){const set=new Map();let vazio=0;
 
 function p2OfF(p){const r=p2Of(p);return r&&canalOK(r)?r:null;} // respeita o filtro de canal
 
+/* ============ PAINEL BLIP (planilha separada) ============ */
+const URL_BLIP="https://docs.google.com/spreadsheets/d/e/2PACX-1vRY3BUM998BjEezPLg8JmPLAxhI3BocIqrwcw_dhCXiMEjVgGoHrRY9t-TuORNZmcpBLsFMSUgqkUXR/pub?gid=1243709720&single=true&output=csv";
+let BLIP={rows:[],loaded:false,err:'',cur:0,mode:'tree'};
+
+function blipParse(grid){
+  const H=grid[0].map(h=>norm(h));
+  const idx=n=>H.findIndex(h=>h===n||h.startsWith(n));
+  const iA=idx('ATENDENTE'),iN=idx('NOME'),iE=idx('EMAIL'),iG=idx('GERENTE'),iS=idx('SUPERINTENDENTE'),iD=idx('DIRETOR');
+  if(iA<0||iG<0||iS<0)return [];
+  const out=[];
+  for(let r=1;r<grid.length;r++){const row=grid[r];if(!row)continue;
+    const a=(row[iA]||'').trim(),g=(row[iG]||'').trim(),s=(row[iS]||'').trim();
+    if(!a||!g||!s)continue;
+    out.push({a,n:(iN>=0?row[iN]||'':'').trim(),e:(iE>=0?row[iE]||'':'').trim(),g,s,d:(iD>=0?row[iD]||'':'').trim()});}
+  return out;
+}
+async function loadBlip(){
+  try{const res=await fetch(URL_BLIP+'&_='+Date.now());if(!res.ok)throw new Error('HTTP '+res.status);
+    const txt=await res.text();if(txt.trim().startsWith('<'))throw new Error('sem acesso');
+    const rows=blipParse(parseCSV(txt));if(!rows.length)throw new Error('sem linhas');
+    BLIP.rows=rows;BLIP.loaded=true;BLIP.err='';}
+  catch(e){BLIP.loaded=false;BLIP.err=e.message||'falha';}
+  if(tab==='blip')drawBlip();
+}
+function blipGroups(){const S={},ord=[];
+  BLIP.rows.forEach(r=>{if(!S[r.s]){S[r.s]={name:r.s,dir:r.d,g:{},go:[],total:0};ord.push(r.s);}
+    const x=S[r.s];if(r.d&&!x.dir)x.dir=r.d;
+    if(!x.g[r.g]){x.g[r.g]=[];x.go.push(r.g);}x.g[r.g].push(r);x.total++;});
+  ord.sort((a,b)=>a.localeCompare(b,'pt'));for(const k in S)S[k].go.sort((a,b)=>a.localeCompare(b,'pt'));
+  return{S,ord};}
+
+function drawBlip(){
+  const el=$('panel3');
+  if(!BLIP.loaded){$('srcs3').innerHTML=`<span class="src warn"><span class="d"></span>BLIP não carregado${BLIP.err?' — '+esc(BLIP.err):''}</span>`;
+    $('chips3').innerHTML='';
+    el.innerHTML=`<div class="snode"><div class="empty"><b>Sem dados do BLIP</b>Verifique se a planilha BLIP SELEÇÃO continua publicada.</div></div>`;return;}
+  const{S,ord}=blipGroups();
+  $('srcs3').innerHTML=`<span class="src live"><span class="d"></span>Ao vivo · ${BLIP.rows.length} atendentes</span>`+
+    `<span class="src snap"><span class="d"></span>${ord.length} superintendências · ${new Set(BLIP.rows.map(r=>r.s+'||'+r.g)).size} gerentes</span>`;
+  const q=$('search3').value.trim();const nq=q?norm(q):null;const hl=nq?makeHL(nq):null;
+  if(BLIP.cur>=ord.length)BLIP.cur=0;
+  $('chips3').innerHTML=`<button class="chip tree ${BLIP.mode==='tree'?'on':''}" data-tree><svg class="ci" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M4 5v14M4 12h5"/></svg>Visão geral</button>`+
+    ord.map((s,i)=>`<button class="chip ${BLIP.mode!=='tree'&&i===BLIP.cur?'on':''}" data-i="${i}">${esc(s)}<span class="c">${S[s].total}</span></button>`).join('');
+  $('chips3').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
+    if(b.hasAttribute('data-tree'))BLIP.mode='tree';else{BLIP.mode='sup';BLIP.cur=+b.getAttribute('data-i');}
+    $('search3').value='';drawBlip();});
+  const match=p=>!nq||[p.a,p.n,p.e,p.g,p.s].some(v=>norm(v).includes(nq));
+  const list=(BLIP.mode==='tree'||nq)?ord:[ord[BLIP.cur]].filter(Boolean);
+  let cards='',tot=0;
+  list.forEach(su=>{const P=S[su];let teams='',n=0;
+    P.go.forEach(g=>{const at=P.g[g].filter(match).sort((a,b)=>a.a.localeCompare(b.a,'pt'));
+      if(!at.length)return;n+=at.length;
+      let rows='';at.forEach(p=>rows+=`<tr><td class="ap">${hl?hl(p.a):esc(p.a)}</td><td class="fn">${hl?hl(p.n):esc(p.n)}</td><td class="em">${p.e?`<a href="mailto:${esc(p.e)}">${hl?hl(p.e):esc(p.e)}</a>`:'—'}</td></tr>`);
+      teams+=`<div class="gteam"><div class="gth"><span class="dot"></span><span class="gn">${esc(g)}</span><span class="gt">Gerente</span><span class="gc">${at.length} atend.</span></div><table><thead><tr><th>Atendente</th><th>Nome</th><th>E-mail</th></tr></thead><tbody>${rows}</tbody></table></div>`;});
+    if(!teams)return;tot+=n;
+    cards+=`<div class="snode"><div class="snode-head"><div class="sh-t"><div class="eb">Superintendência</div><h3>${esc(P.name)}</h3><div class="dir">Diretor(a): ${esc(P.dir||'—')}</div></div><div class="p-metrics"><div class="pm"><b>${P.go.length}</b><span>Gerentes</span></div><div class="pm"><b>${n}</b><span>Atendentes</span></div></div></div><div class="schildren">${teams}</div></div>`;});
+  if(nq)$('srcs3').innerHTML+=`<span class="src snap"><span class="d"></span>${tot} resultado(s) para "${esc(q)}"</span>`;
+  el.innerHTML=cards?`<div class="tree">${cards}</div>`:`<div class="snode"><div class="empty"><b>Nada encontrado</b>Tente outro termo.</div></div>`;
+}
+
 let mode2='tree', cur2=0;
 function drawP2(){
   const el=$('panel2');
@@ -454,8 +537,9 @@ let tab='estrutura';
 function showTab(t){tab=t;
   $('view-estrutura').style.display=t==='estrutura'?'block':'none';
   $('view-p2').style.display=t==='p2'?'block':'none';
+  $('view-blip').style.display=t==='blip'?'block':'none';
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.getAttribute('data-t')===t));
-  if(t==='p2')drawP2();else draw();}
+  if(t==='p2')drawP2();else if(t==='blip')drawBlip();else draw();}
 
 function render(){renderKPIs();renderSrc();const{m,ord}=supList();if(cur>=ord.length)cur=0;initCollapse(ord,m);
   const treeChip=`<button class="chip tree ${mode==='tree'?'on':''}" data-tree><svg class="ci" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M4 5v14M4 12h5"/></svg>Visão geral</button>`;
@@ -498,8 +582,9 @@ ROWS=[];
 render();
 $('search').addEventListener('input',()=>draw());
 $('search2').addEventListener('input',()=>drawP2());
+$('search3').addEventListener('input',()=>drawBlip());
 $('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.getAttribute('data-t')));
-async function loadAll(){await loadLive();await loadP2();if(tab==='p2')drawP2();}
+async function loadAll(){await loadLive();await Promise.allSettled([loadP2(),loadBlip()]);if(tab==='p2')drawP2();if(tab==='blip')drawBlip();}
 $('btnRefresh').onclick=loadAll;
 loadAll();
 setInterval(loadAll,POLL_MS);
