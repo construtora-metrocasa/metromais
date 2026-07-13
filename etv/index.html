@@ -117,6 +117,10 @@
   .gth .gn{font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px}
   .gth .gt{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
   .gth .gc{margin-left:auto;background:#fff;border:1px solid var(--line);border-radius:999px;font-size:10px;font-weight:700;color:var(--ink-2);padding:2px 9px}
+  .gth{cursor:pointer;user-select:none}
+  .gth .caret{width:15px;height:15px;stroke:var(--ink-2);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;transition:transform .15s}
+  .gteam:not(.collapsed) > .gth .caret{transform:rotate(90deg)}
+  .gteam.collapsed > .gbody{display:none}
   #panel3 table{width:100%;border-collapse:collapse}
   #panel3 thead th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:8px 14px;border-bottom:1px solid var(--line)}
   #panel3 tbody td{padding:9px 14px;font-size:13px;border-top:1px solid var(--line)}
@@ -311,7 +315,6 @@ function renderSrc(){let s=`<span class="src ${src.k}"><span class="d"></span>${
     s+=STATS.semSit
       ? `<span class="src warn"><span class="d"></span>⚠ coluna de situação não encontrada — sem filtro de ativos</span>`
       : `<span class="src live"><span class="d"></span>Somente ATIVOS · ${STATS.inativos} inativo(s) excluído(s) de ${STATS.total}</span>`;
-    if(STATS.excluidos)s+=`<span class="src snap"><span class="d"></span>${STATS.excluidos} registro(s) ocultado(s): ${EXCLUIR_SUP.join(', ')}</span>`;
   }
   $('srcs').innerHTML=s;}
 
@@ -383,17 +386,21 @@ function p2Cells(row){ // mostra só as colunas de dado (sem a chave e sem as oc
 }
 
 function hasP2(n){if(n.real&&p2OfF(n.person))return true;return n.children.some(hasP2);}
+const col2=new Set(); let init2=false;
 function nodeP2(su,n,nq,hl){
   const kids=n.children.filter(k=>hasP2(k)&&(!nq||keepTreeP2(k,nq))).sort(sortNodes);
   const role=n.real?roleOf(n.person.fn):{t:'Gerente',c:'g'};
   const row=n.real?p2OfF(n.person):null;
   const has=kids.length>0;
-  const lead=has?`<svg class="caret" viewBox="0 0 24 24" style="transform:rotate(90deg)"><path d="m9 18 6-6-6-6"/></svg>`:`<span class="leaf"></span>`;
+  const id='P2::'+su+'::'+n.ap;
+  const col=has&&!nq&&col2.has(id);
+  const lead=has?`<svg class="caret" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>`:`<span class="leaf"></span>`;
   const nm=n.real&&n.person.nome?`<span class="full">${hl?hl(n.person.nome):esc(n.person.nome)}</span>`:'';
   const vals=row?`<span class="p2v">${p2Cells(row)}</span>`:`<span class="p2v"><span class="p2c" style="border-style:dashed;color:var(--muted)"><b style="color:var(--muted);font-weight:500">sem registro na Página 2</b></span></span>`;
-  const head=`<div class="pn-head">${lead}<span class="pn-name"><span class="ap">${hl?hl(n.ap):esc(n.ap)}</span>${nm}</span><span class="role r-${role.c}">${esc(role.t)}</span>${vals}</div>`;
+  const cnt=has?`<span class="pn-count">${kids.length}</span>`:'';
+  const head=`<div class="pn-head">${lead}<span class="pn-name"><span class="ap">${hl?hl(n.ap):esc(n.ap)}</span>${nm}</span><span class="role r-${role.c}">${esc(role.t)}</span>${vals}${cnt}</div>`;
   const ch=has?`<div class="pn-children">${kids.map(k=>nodeP2(su,k,nq,hl)).join('')}</div>`:'';
-  return `<div class="pnode ${has?'has':''}">${head}${ch}</div>`;
+  return `<div class="pnode ${has?'has':''} ${col?'collapsed':''}" data-id="${esc(id)}">${head}${ch}</div>`;
 }
 function keepTreeP2(n,nq){if(!nq)return true;if(matchNode(n,nq))return true;
   if(n.real){const r=p2Of(n.person);if(r&&r.some(v=>norm(v).includes(nq)))return true;}
@@ -419,6 +426,7 @@ function p2OfF(p){const r=p2Of(p);return r&&canalOK(r)?r:null;} // respeita o fi
 /* ============ PAINEL BLIP (planilha separada) ============ */
 const URL_BLIP="https://docs.google.com/spreadsheets/d/e/2PACX-1vRY3BUM998BjEezPLg8JmPLAxhI3BocIqrwcw_dhCXiMEjVgGoHrRY9t-TuORNZmcpBLsFMSUgqkUXR/pub?gid=1243709720&single=true&output=csv";
 let BLIP={rows:[],loaded:false,err:'',cur:0,mode:'tree'};
+const col3=new Set();
 
 function blipParse(grid){
   const H=grid[0].map(h=>norm(h));
@@ -469,11 +477,18 @@ function drawBlip(){
     P.go.forEach(g=>{const at=P.g[g].filter(match).sort((a,b)=>a.a.localeCompare(b.a,'pt'));
       if(!at.length)return;n+=at.length;
       let rows='';at.forEach(p=>rows+=`<tr><td class="ap">${hl?hl(p.a):esc(p.a)}</td><td class="fn">${hl?hl(p.n):esc(p.n)}</td><td class="em">${p.e?`<a href="mailto:${esc(p.e)}">${hl?hl(p.e):esc(p.e)}</a>`:'—'}</td></tr>`);
-      teams+=`<div class="gteam"><div class="gth"><span class="dot"></span><span class="gn">${esc(g)}</span><span class="gt">Gerente</span><span class="gc">${at.length} atend.</span></div><table><thead><tr><th>Atendente</th><th>Nome</th><th>E-mail</th></tr></thead><tbody>${rows}</tbody></table></div>`;});
+      const gid='B::'+su+'::'+g, gcol=!nq&&col3.has(gid);
+      teams+=`<div class="gteam ${gcol?'collapsed':''}" data-id="${esc(gid)}"><div class="gth"><svg class="caret" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><span class="dot"></span><span class="gn">${esc(g)}</span><span class="gt">Gerente</span><span class="gc">${at.length} atend.</span></div><div class="gbody"><table><thead><tr><th>Atendente</th><th>Nome</th><th>E-mail</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;});
     if(!teams)return;tot+=n;
-    cards+=`<div class="snode"><div class="snode-head"><div class="sh-t"><div class="eb">Superintendência</div><h3>${esc(P.name)}</h3><div class="dir">Diretor(a): ${esc(P.dir||'—')}</div></div><div class="p-metrics"><div class="pm"><b>${P.go.length}</b><span>Gerentes</span></div><div class="pm"><b>${n}</b><span>Atendentes</span></div></div></div><div class="schildren">${teams}</div></div>`;});
+    const sid3='BS::'+su, scol3=!nq&&col3.has(sid3);
+    cards+=`<div class="snode ${scol3?'collapsed':''}" data-id="${esc(sid3)}"><div class="snode-head"><svg class="caret" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><div class="sh-t"><div class="eb">Superintendência</div><h3>${esc(P.name)}</h3><div class="dir">Diretor(a): ${esc(P.dir||'—')}</div></div><div class="p-metrics"><div class="pm"><b>${P.go.length}</b><span>Gerentes</span></div><div class="pm"><b>${n}</b><span>Atendentes</span></div></div></div><div class="schildren">${teams}</div></div>`;});
   if(nq)$('srcs3').innerHTML+=`<span class="src snap"><span class="d"></span>${tot} resultado(s) para "${esc(q)}"</span>`;
-  el.innerHTML=cards?`<div class="tree">${cards}</div>`:`<div class="snode"><div class="empty"><b>Nada encontrado</b>Tente outro termo.</div></div>`;
+  const bar=`<div class="treebar"><span class="tinfo">${nq?`${tot} resultado(s)`:`${tot} atendentes · ${list.length} superintendência(s)`}</span><div class="tbtns"><button class="tbtn" id="exp3">Expandir tudo</button><button class="tbtn" id="col3b">Recolher tudo</button></div></div>`;
+  el.innerHTML=bar+(cards?`<div class="tree">${cards}</div>`:`<div class="snode"><div class="empty"><b>Nada encontrado</b>Tente outro termo.</div></div>`);
+  $('exp3').onclick=()=>{col3.clear();drawBlip();};
+  $('col3b').onclick=()=>{col3.clear();ord.forEach(su=>{col3.add('BS::'+su);S[su].go.forEach(g=>col3.add('B::'+su+'::'+g));});drawBlip();};
+  el.querySelectorAll('.snode-head').forEach(hd=>hd.onclick=()=>{const n=hd.parentElement,id=n.getAttribute('data-id');n.classList.toggle('collapsed');n.classList.contains('collapsed')?col3.add(id):col3.delete(id);});
+  el.querySelectorAll('.gth').forEach(hd=>hd.onclick=()=>{const n=hd.parentElement,id=n.getAttribute('data-id');n.classList.toggle('collapsed');n.classList.contains('collapsed')?col3.add(id):col3.delete(id);});
 }
 
 let mode2='tree', cur2=0;
@@ -522,7 +537,8 @@ function drawP2(){
     roots.sort(sortNodes);
     if(!roots.length)return;
     const own=m[su].own;
-    cards+=`<div class="snode"><div class="snode-head"><svg class="caret" viewBox="0 0 24 24" style="transform:rotate(90deg)"><path d="m9 18 6-6-6-6"/></svg><div class="sh-t"><div class="eb">Superintendência</div><h3>${esc(m[su].name)}</h3><div class="dir">${own&&own.nome?esc(own.nome)+' · ':''}Diretor(a): ${esc(m[su].dir||'—')}</div></div><div class="p-metrics"><div class="pm"><b>${cnt[su]}</b><span>Com canal</span></div></div></div><div class="schildren">${roots.map(r=>nodeP2(su,r,nq,hl)).join('')}</div></div>`;
+    const sid2='P2S::'+su, scol2=!nq&&col2.has(sid2);
+    cards+=`<div class="snode ${scol2?'collapsed':''}" data-id="${esc(sid2)}"><div class="snode-head"><svg class="caret" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><div class="sh-t"><div class="eb">Superintendência</div><h3>${esc(m[su].name)}</h3><div class="dir">${own&&own.nome?esc(own.nome)+' · ':''}Diretor(a): ${esc(m[su].dir||'—')}</div></div><div class="p-metrics"><div class="pm"><b>${cnt[su]}</b><span>Com canal</span></div></div></div><div class="schildren">${roots.map(r=>nodeP2(su,r,nq,hl)).join('')}</div></div>`;
   });
   let un='';
   if(P2.unmatched.length&&(mode2==='tree'||nq)){
@@ -530,7 +546,17 @@ function drawP2(){
       P2.unmatched.slice(0,50).map(r=>`<div class="row">${P2.headers.map((h,i)=>`<b>${esc(h)}:</b> ${esc(r[i]||'—')}`).join(' · ')}</div>`).join('')+
       (P2.unmatched.length>50?`<div class="row">…e mais ${P2.unmatched.length-50}</div>`:'')+`</div>`;
   }
-  el.innerHTML=(cards?`<div class="tree">${cards}</div>`:`<div class="snode"><div class="empty"><b>Nenhuma correspondência</b>Nenhuma pessoa desta seleção tem registro na Página 2.</div></div>`)+un;
+  const totP2=list.reduce((a,su)=>a+cnt[su],0);
+  const bar=`<div class="treebar"><span class="tinfo">${nq?`${totP2} com canal no filtro`:`${totP2} pessoa(s) com canal · ${list.length} superintendência(s)`}</span><div class="tbtns"><button class="tbtn" id="exp2">Expandir tudo</button><button class="tbtn" id="col2b">Recolher tudo</button></div></div>`;
+  el.innerHTML=bar+(cards?`<div class="tree">${cards}</div>`:`<div class="snode"><div class="empty"><b>Nenhuma correspondência</b>Nenhuma pessoa desta seleção tem registro na Página 2.</div></div>`)+un;
+  $('exp2').onclick=()=>{col2.clear();drawP2();};
+  $('col2b').onclick=()=>{col2.clear();
+    ordP2.forEach(su=>{col2.add('P2S::'+su);
+      const walk=n=>{if(n.children.length){col2.add('P2::'+su+'::'+n.ap);n.children.forEach(walk);}};
+      buildSup(su,m[su].people).filter(hasP2).forEach(walk);});
+    drawP2();};
+  el.querySelectorAll('.snode-head').forEach(hd=>hd.onclick=()=>{const n=hd.parentElement,id=n.getAttribute('data-id');n.classList.toggle('collapsed');n.classList.contains('collapsed')?col2.add(id):col2.delete(id);});
+  el.querySelectorAll('.pnode.has > .pn-head').forEach(hd=>hd.onclick=()=>{const n=hd.parentElement,id=n.getAttribute('data-id');n.classList.toggle('collapsed');n.classList.contains('collapsed')?col2.add(id):col2.delete(id);});
 }
 
 let tab='estrutura';
