@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Metrocasa · Prestadores Ativos (ETV Pública)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--red:#E2231A;--red-deep:#A50F12;--red-soft:#FCE9E8;--gold:#C9A227;--ink:#16161A;--ink-2:#3B3B42;--muted:#7A7A85;--line:#E7E7EC;--surface:#FFFFFF;--bg:#F4F4F6;--bg-2:#ECECEF;--good:#1B7A3D;--good-bg:#E7F6EC;--warn:#9A6212;--warn-bg:#FFF4E5;--shadow:0 1px 2px rgba(0,0,0,.04),0 12px 32px -12px rgba(20,20,26,.18);}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 16px calc(env(safe-area-inset-bottom) + 48px)}
+  .logo{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .logo .plus{color:var(--red)}
+  .topbar{background:linear-gradient(135deg,var(--ink),#26262E);color:#fff;position:relative;overflow:hidden;border-radius:0 0 22px 22px;padding:calc(env(safe-area-inset-top) + 20px) 22px 20px;box-shadow:var(--shadow);margin:0 -16px 20px}
+  .topbar::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)}
+  .tb-row{display:flex;align-items:center;gap:13px;max-width:1180px;margin:0 auto}
+  .tb-row .mark{width:44px;height:44px;border-radius:12px;flex:0 0 auto}
+  .tb-title .logo{font-size:21px}
+  .tb-title .st{font-size:12px;color:rgba(255,255,255,.6);font-weight:500;margin-top:2px}
+  .tb-actions{margin-left:auto;display:flex;gap:8px}
+  .tb-btn{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;height:40px;padding:0 14px;font-family:'Sora',sans-serif;font-weight:600;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .tb-btn svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .tb-btn.spinning svg{animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:16px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:15px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--red)}
+  .kpi.ink::before{background:var(--ink)}.kpi.gold::before{background:var(--gold)}
+  .kpi .kl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+  .kpi .kv{font-family:'Sora',sans-serif;font-weight:700;font-size:26px;letter-spacing:-.02em;margin-top:5px;line-height:1}
+  .kpi .ks{font-size:11.5px;color:var(--ink-2);margin-top:5px}
+  .srcs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .src{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;border-radius:999px;padding:6px 12px}
+  .src .d{width:8px;height:8px;border-radius:50%}
+  .src.snap{background:var(--bg-2);color:var(--ink-2)}.src.snap .d{background:var(--muted)}
+  .src.live{background:var(--good-bg);color:var(--good)}.src.live .d{background:#27AE60}
+  .src.warn{background:var(--warn-bg);color:var(--warn)}.src.warn .d{background:#E0902F}
+  .search{position:relative;margin-bottom:14px}
+  .search input{width:100%;height:46px;border:1px solid var(--line);border-radius:12px;padding:0 14px 0 42px;font-size:14px;font-family:inherit;background:var(--surface);box-shadow:var(--shadow)}
+  .search input:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(226,35,26,.12)}
+  .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:.14s;font-family:'Sora',sans-serif}
+  .chip:hover{border-color:var(--red);color:var(--red)}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .chip .c{opacity:.65;margin-left:4px}
+  .chip.tree .ci{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:6px}
+  .chip.tree.on{background:var(--red);border-color:var(--red)}
+  .treebar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .treebar .tinfo{font-size:12px;color:var(--muted);font-weight:600}
+  .tbtns{display:flex;gap:7px}
+  .tbtn{border:1px solid var(--line);background:#fff;border-radius:9px;height:34px;padding:0 13px;font-family:'Sora',sans-serif;font-weight:600;font-size:12px;color:var(--ink-2);cursor:pointer;transition:.14s}
+  .tbtn:hover{border-color:var(--red);color:var(--red)}
+  .tree{display:flex;flex-direction:column;gap:11px}
+  /* superintendente card */
+  .snode{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+  .snode-head{background:linear-gradient(135deg,var(--ink),#26262E);color:#fff;padding:13px 16px;position:relative;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+  .snode-head::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--red)}
+  .snode-head .sh-t{flex:1;min-width:0}
+  .snode-head .eb{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:700}
+  .snode-head h3{font-family:'Sora',sans-serif;font-size:18px;font-weight:700;line-height:1.15}
+  .snode-head .dir{font-size:11px;color:rgba(255,255,255,.65);margin-top:2px}
+  .snode-head .caret{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;transition:transform .15s;opacity:.85}
+  .snode:not(.collapsed) > .snode-head .caret{transform:rotate(90deg)}
+  .snode.collapsed > .schildren{display:none}
+  .snode-head .pm{padding:6px 11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);border-radius:10px;text-align:center}
+  .snode-head .p-metrics{display:flex;gap:8px}
+  .snode-head .pm b{font-family:'Sora',sans-serif;font-size:16px;display:block;line-height:1}
+  .snode-head .pm span{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.6);font-weight:600}
+  .schildren{padding:8px 12px 12px}
+  /* person node (recursivo) */
+  .pnode{margin-top:2px}
+  .pn-head{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;cursor:default}
+  .pnode.has > .pn-head{cursor:pointer}
+  .pn-head:hover{background:var(--bg)}
+  .pn-head .caret{width:15px;height:15px;stroke:var(--ink-2);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;transition:transform .15s}
+  .pnode:not(.collapsed) > .pn-head .caret{transform:rotate(90deg)}
+  .pnode.collapsed > .pn-children{display:none}
+  .pn-head .leaf{width:15px;flex:0 0 auto;display:flex;justify-content:center}
+  .pn-head .leaf::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--line)}
+  .pn-name{display:flex;flex-direction:column;gap:1px;flex:0 0 auto;min-width:0;max-width:46%}
+  .pn-head .ap{font-family:'Sora',sans-serif;font-weight:700;font-size:13.5px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pn-name .full{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .role{display:inline-block;border-radius:999px;padding:2px 9px;font-size:10px;font-weight:700;font-family:'Sora',sans-serif;text-transform:uppercase;letter-spacing:.03em;flex:0 0 auto}
+  .r-g{background:var(--red-soft);color:var(--red-deep)}
+  .r-c{background:#F7EFD6;color:#8A6D12}
+  .r-v{background:var(--bg-2);color:var(--ink-2)}
+  .r-d{background:#EDE7FB;color:#5B3FA8}
+  .r-x{background:#EAF1FB;color:#2A5DA8}
+  .pn-email{flex:1;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+  .pn-email a{color:var(--red-deep);text-decoration:none}.pn-email a:hover{text-decoration:underline}
+  .pn-email .syn{color:var(--warn);font-style:italic}
+  .pn-count{flex:0 0 auto;background:#fff;border:1px solid var(--line);border-radius:999px;font-size:10px;font-weight:700;color:var(--ink-2);padding:2px 9px}
+  .pn-children{margin:2px 0 4px 21px;padding-left:12px;border-left:2px solid var(--line)}
+  .snode-head .flagsup{font-size:11px;color:#FFD9A0;font-weight:700;margin-top:3px}
+  mark{background:#FFE48A;border-radius:3px;padding:0 2px}
+  .empty{padding:40px;text-align:center;color:var(--muted)}.empty b{display:block;color:var(--ink-2);font-family:'Sora',sans-serif;margin-bottom:5px;font-size:15px}
+  footer{margin-top:22px;text-align:center;font-size:11px;color:var(--muted);line-height:1.7}footer b{color:var(--ink-2)}
+  @media (max-width:720px){.kpis{grid-template-columns:1fr}.tb-title .st{display:none}.pn-email{flex-basis:100%;text-align:left;order:5;padding-left:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><div class="tb-row">
+    <svg class="mark" viewBox="0 0 512 512" id="mk"></svg>
+    <div class="tb-title"><div class="logo">metrocasa<span class="plus">+</span></div><div class="st">Prestadores Ativos · ETV Pública</div></div>
+    <div class="tb-actions"><button class="tb-btn" id="btnRefresh"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>Atualizar</button></div>
+  </div></div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kl">Prestadores ativos</div><div class="kv" id="kTot">—</div><div class="ks">consultores, coordenadores e gerentes</div></div>
+    <div class="kpi ink"><div class="kl">Superintendentes</div><div class="kv" id="kSup">—</div><div class="ks">pela coluna Função</div></div>
+    <div class="kpi gold"><div class="kl">Gerentes</div><div class="kv" id="kGer">—</div><div class="ks">por função (não pela coluna)</div></div>
+  </div>
+
+  <div class="srcs" id="srcs"></div>
+
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="search" placeholder="Buscar apelido, nome, e-mail, gerente ou superintendência…" autocomplete="off"></div>
+  <div class="chips" id="chips"></div>
+  <div id="panel"></div>
+
+  <footer><b>Metrocasa · Marketing</b> — Prestadores Ativos (ETV) · Superintendente › Gerente › Coordenador › Consultor · papéis pela coluna Função</footer>
+</div>
+
+<script>
+const PUB="https://docs.google.com/spreadsheets/d/e/2PACX-1vStykIpeFQ4u54thul1w2oSmkzaK-xfSSPdTHqonGQmWZtgIVOOuzBKcXQniyai2fKVUDG8MY-IHHOx/pub?gid=0&single=true&output=csv";
+const GVIZ="https://docs.google.com/spreadsheets/d/1rZoHYvmFaXozIuaBmd6QMzK0NdtwJMeUsdY58wIh5ag/gviz/tq?tqx=out:csv&gid=0";
+const POLL_MS=300000;
+const SNAP_CSV="";
+
+// Superintendências a ignorar (ruído / cadastro incorreto). Edite à vontade.
+const EXCLUIR_SUP=["GUSTAVO","MARIA","METROCASA","ROBERT","SAMARA"];
+const EXCLUIR_N=new Set(EXCLUIR_SUP.map(s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'')));
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+let ROWS=[], mode='tree', cur=0, DIAG=null, STATS={total:0,inativos:0,excluidos:0,semSit:false}, src={k:'warn',t:'Aguardando dados ao vivo'};
+const collapsed=new Set(); let treeInit=false;
+function makeHL(nq){return t=>{const i=norm(t).indexOf(nq);if(i<0)return esc(t);let raw=String(t||'');let acc=0,map=[];for(let k=0;k<raw.length;k++){const c=norm(raw[k]);map.push(acc);acc+=c.length;}let start=raw.length,end=raw.length;for(let k=0;k<raw.length;k++){if(map[k]<=i&&i<map[k]+Math.max(1,norm(raw[k]).length)){start=k;break;}}let ei=i+nq.length;for(let k=start;k<raw.length;k++){if(map[k]>=ei){end=k;break;}}return esc(raw.slice(0,start))+'<mark>'+esc(raw.slice(start,end))+'</mark>'+esc(raw.slice(end));};}
+
+function parseCSV(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}else{if(c==='"')q=true;else if(c===','){row.push(f);f='';}else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';}else if(c==='\r'){}else f+=c;}}if(f.length||row.length){row.push(f);rows.push(row);}return rows;}
+
+function mapCols(head){const H=head.map(norm);const find=(...names)=>{for(const n of names){const i=H.findIndex(h=>h===n);if(i>=0)return i;}for(const n of names){const i=H.findIndex(h=>h.startsWith(n));if(i>=0)return i;}return -1;};
+  const findLast=(...names)=>{let idx=-1;H.forEach((h,i)=>{if(names.some(n=>h===n||h.startsWith(n)))idx=i;});return idx;};
+  return{apelido:find('APELIDO'),nome:find('NOMECOMPLETO','NOME'),gerente:find('GERENTE'),superint:find('SUPERINT','SUPERINTENDENTE'),diretor:find('DIRETOR'),funcao:find('FUNCAO'),email:findLast('EMAIL'),situacao:find('SITUACAO','STATUS','SITUACAOCONTRATO','ATIVO')};}
+const isAtivo=v=>{const s=norm(v);return !s||s.startsWith('ATIV');}; // vazio = não bloqueia
+
+function fromGrid(grid){
+  let hi=grid.findIndex(r=>{const s=r.map(norm);return s.some(x=>x==='APELIDO')&&s.some(x=>x.startsWith('SUPERINT'));});
+  if(hi<0)hi=0;
+  const m=mapCols(grid[hi]);
+  if(m.apelido<0||m.superint<0||m.gerente<0){DIAG={headers:(grid[hi]||[]).map(x=>String(x).trim()).filter(Boolean),miss:[m.apelido<0?'APELIDO':null,m.gerente<0?'GERENTE':null,m.superint<0?'SUPERINTENDENTE':null].filter(Boolean)};return [];}
+  DIAG=null;
+  const out=[];STATS={total:0,inativos:0,excluidos:0,semSit:m.situacao<0};
+  for(let r=hi+1;r<grid.length;r++){const row=grid[r];if(!row)continue;
+    const ap=(row[m.apelido]||'').trim(),su=(row[m.superint]||'').trim(),ge=(row[m.gerente]||'').trim();
+    if(!ap||!su)continue;                      // gerente pode ser vazio (o superintendente não tem gerente acima)
+    STATS.total++;
+    if(EXCLUIR_N.has(norm(su))){STATS.excluidos++;continue;}
+    if(m.situacao>=0&&!isAtivo(row[m.situacao])){STATS.inativos++;continue;}
+    out.push({ap,nome:(m.nome>=0?row[m.nome]||'':'').trim(),ge,su,dir:(m.diretor>=0?row[m.diretor]||'':'').trim(),fn:(m.funcao>=0?row[m.funcao]||'':'').trim(),em:(m.email>=0?row[m.email]||'':'').trim()});}
+  return out;
+}
+
+// mostra APENAS a palavra-chave do cargo contida na célula da coluna FUNÇÃO
+function roleOf(fn){const F=norm(fn);
+  if(F.includes('DIRETOR'))return{t:'Diretor',c:'d',r:-1};
+  if(F.includes('SUPERINTENDENTE'))return{t:'Superintendente',c:'x',r:0};
+  if(F.includes('GERENTE'))return{t:'Gerente',c:'g',r:1};
+  if(F.includes('COORDENADOR'))return{t:'Coordenador',c:'c',r:2};
+  if(F.includes('CONSULTOR'))return{t:'Consultor',c:'v',r:3};
+  return{t:(fn||'—'),c:'x',r:4};}
+
+function supRoster(){const m={};ROWS.forEach(r=>{if(roleOf(r.fn).r===0)m[norm(r.ap)]=r;});return m;}
+function supList(){const roster=supRoster();const m={},ord=[];
+  ROWS.forEach(r=>{
+    if(roleOf(r.fn).r===0)return; // superintendente não é membro da própria árvore: é o cabeçalho
+    if(!m[r.su]){const own=roster[norm(r.su)]||null;m[r.su]={name:r.su,dir:r.dir,people:[],own,orphan:!own};ord.push(r.su);}
+    if(r.dir&&!m[r.su].dir)m[r.su].dir=r.dir;
+    m[r.su].people.push(r);});
+  // superintendente cadastrado que ainda não tem grupo (sem subordinados na base)
+  Object.values(roster).forEach(s=>{if(!m[s.ap]){m[s.ap]={name:s.ap,dir:s.dir,people:[],own:s,orphan:false};ord.push(s.ap);}});
+  ord.sort((a,b)=>a.localeCompare(b,'pt'));return{m,ord};}
+
+// monta a hierarquia real por quem-reporta-a-quem (coluna F), papéis pela função
+function buildSup(su,people){
+  const nSu=norm(su);
+  const nodes={}; // apelido -> node
+  const ensure=(ap,person)=>{const k=ap;if(!nodes[k])nodes[k]={ap,person:person||null,real:!!person,children:[]};else if(person&&!nodes[k].real){nodes[k].person=person;nodes[k].real=true;}return nodes[k];};
+  people.forEach(p=>ensure(p.ap,p));
+  const roots=[];
+  people.forEach(p=>{const node=nodes[p.ap];const par=p.ge;
+    if(!par||norm(par)===nSu||par===p.ap){roots.push(node);return;}
+    let pn=nodes[par];
+    if(!pn){pn=ensure(par,null);}         // líder sem cadastro na base (ex.: cortado / não-ativo)
+    pn.children.push(node);
+  });
+  // nós sintéticos (líder sem row) que não foram atribuídos como filho de ninguém -> raiz sob a superintendente
+  Object.values(nodes).forEach(n=>{if(!n.real){const isChild=Object.values(nodes).some(o=>o.children.includes(n));if(!isChild&&!roots.includes(n))roots.push(n);}});
+  return roots;
+}
+
+function rank(n){return n.real?roleOf(n.person.fn).r:1;} // sintético tratado como gerente
+function sortNodes(a,b){const r=rank(a)-rank(b);return r||a.ap.localeCompare(b.ap,'pt');}
+function countPeople(n){let c=n.real?1:0;n.children.forEach(k=>c+=countPeople(k));return c;}
+
+function matchNode(n,nq){if(!nq)return true;if(n.real){const p=n.person;return[p.ap,p.nome,p.em,p.ge,p.su,p.fn].some(v=>norm(v).includes(nq));}return norm(n.ap).includes(nq);}
+function keepTree(n,nq){if(!nq)return true;if(matchNode(n,nq))return true;return n.children.some(k=>keepTree(k,nq));}
+
+function nodeHTML(su,n,hl,nq,forceOpen){
+  const kids=n.children.filter(k=>!nq||keepTree(k,nq)).sort(sortNodes);
+  const has=kids.length>0;
+  const id='N::'+su+'::'+n.ap;
+  const col=has&&!forceOpen&&!nq&&collapsed.has(id);
+  const role=n.real?roleOf(n.person.fn):{t:'Gerente',c:'g'};
+  const ap=hl?hl(n.ap):esc(n.ap);
+  let em;
+  if(n.real)em=n.person.em?`<a href="mailto:${esc(n.person.em)}">${hl?hl(n.person.em):esc(n.person.em)}</a>`:'—';
+  else em=`<span class="syn">líder sem cadastro na base ativa</span>`;
+  const lead=has?`<svg class="caret" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>`:`<span class="leaf"></span>`;
+  const cnt=has?`<span class="pn-count">${countPeople(n)-(n.real?1:0)}</span>`:'';
+  const nm=(n.real&&n.person.nome)?`<span class="full">${hl?hl(n.person.nome):esc(n.person.nome)}</span>`:'';
+  const head=`<div class="pn-head">${lead}<span class="pn-name"><span class="ap">${ap}</span>${nm}</span><span class="role r-${role.c}">${esc(role.t)}</span><span class="pn-email">${em}</span>${cnt}</div>`;
+  const ch=has?`<div class="pn-children">${kids.map(k=>nodeHTML(su,k,hl,nq,forceOpen)).join('')}</div>`:'';
+  return `<div class="pnode ${has?'has':''} ${col?'collapsed':''}" data-id="${esc(id)}">${head}${ch}</div>`;
+}
+
+function supCard(su,data,forceOpen,nq,hl){
+  let roots=buildSup(su,data.people);
+  if(nq)roots=roots.filter(r=>keepTree(r,nq));
+  roots.sort(sortNodes);
+  if(nq&&!roots.length&&!(data.own&&matchNode({real:true,person:data.own,ap:data.own.ap,children:[]},nq)))return '';
+  const gerCount=data.people.filter(p=>roleOf(p.fn).r===1).length;
+  const shown=nq?roots.reduce((a,r)=>a+countShown(r,nq),0):data.people.length;
+  const sid='S::'+su;const scol=!forceOpen&&!nq&&collapsed.has(sid);
+  const body=roots.length?roots.map(r=>nodeHTML(su,r,hl,nq,forceOpen)).join(''):`<div class="empty" style="padding:18px;font-size:12.5px">Sem subordinados cadastrados nesta base.</div>`;
+  const own=data.own;
+  const sub=own
+    ? `<div class="dir">${esc(own.nome||'')}${own.em?` · <a href="mailto:${esc(own.em)}" style="color:rgba(255,255,255,.85)">${esc(own.em)}</a>`:''}</div><div class="dir">Diretor(a): ${esc(data.dir||'—')}</div>`
+    : `<div class="dir">Diretor(a): ${esc(data.dir||'—')}</div><div class="flagsup">⚠ não consta com função de Superintendente</div>`;
+  return `<div class="snode ${scol?'collapsed':''}" data-id="${sid}"><div class="snode-head"><svg class="caret" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg><div class="sh-t"><div class="eb">Superintendência${own?'':' · inconsistência'}</div><h3>${esc(data.name)}</h3>${sub}</div><div class="p-metrics"><div class="pm"><b>${gerCount}</b><span>Gerentes</span></div><div class="pm"><b>${shown}</b><span>Pessoas</span></div></div></div><div class="schildren">${body}</div></div>`;
+}
+function countShown(n,nq){let c=(n.real&&matchNode(n,nq))?1:0;n.children.forEach(k=>{if(keepTree(k,nq))c+=countShown(k,nq);});return c;}
+
+function renderKPIs(){$('kTot').textContent=ROWS.length.toLocaleString('pt-BR');
+  const nSup=ROWS.filter(r=>roleOf(r.fn).r===0).length;
+  const{m,ord}=supList();const orphans=ord.filter(s=>m[s].orphan);
+  $('kSup').textContent=nSup;
+  const sub=document.querySelector('.kpi.ink .ks');
+  if(sub)sub.innerHTML=orphans.length?`<b style="color:var(--warn)">${orphans.length} grupo(s) sem superintendente: ${orphans.map(esc).join(', ')}</b>`:'todos com função de superintendente';
+  $('kGer').textContent=ROWS.filter(r=>roleOf(r.fn).r===1).length;}
+function renderSrc(){let s=`<span class="src ${src.k}"><span class="d"></span>${esc(src.t)}</span>`;
+  if(ROWS.length){
+    s+=STATS.semSit
+      ? `<span class="src warn"><span class="d"></span>⚠ coluna de situação não encontrada — sem filtro de ativos</span>`
+      : `<span class="src live"><span class="d"></span>Somente ATIVOS · ${STATS.inativos} inativo(s) excluído(s) de ${STATS.total}</span>`;
+    if(STATS.excluidos)s+=`<span class="src snap"><span class="d"></span>${STATS.excluidos} registro(s) ocultado(s): ${EXCLUIR_SUP.join(', ')}</span>`;
+  }
+  $('srcs').innerHTML=s;}
+
+function initCollapse(ord,m){if(treeInit)return;ord.forEach(su=>{const walk=n=>{if(n.children.length){collapsed.add('N::'+su+'::'+n.ap);n.children.forEach(walk);}};buildSup(su,m[su].people).forEach(walk);});treeInit=true;}
+
+function diagPanel(){
+  const pill=x=>`<span style="display:inline-block;background:var(--bg-2);color:var(--ink-2);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;font-family:'Sora',sans-serif;margin:3px">${esc(x)}</span>`;
+  if(DIAG){return `<div class="snode"><div class="empty"><b>Colunas não reconhecidas</b>Este painel espera os cabeçalhos <b>APELIDO</b>, <b>GERENTE</b> e <b>SUPERINTENDENTE</b> (igual ao ETV). Faltando: ${esc(DIAG.miss.join(', '))||'—'}.<div style="margin-top:14px;font-weight:600;color:var(--ink-2)">Cabeçalhos encontrados na planilha:</div><div style="margin-top:6px">${DIAG.headers.map(pill).join('')||'—'}</div><div style="margin-top:14px;font-size:12.5px">Me diga qual coluna é apelido, qual é gerente e qual é superintendente que eu remapeio.</div></div></div>`;}
+  return `<div class="snode"><div class="empty"><b>Aguardando dados ao vivo</b>A planilha é privada — abra este painel em um navegador logado no Google com acesso a ela. Só popula para quem tem permissão.</div></div>`;
+}
+function render(){renderKPIs();renderSrc();const{m,ord}=supList();if(cur>=ord.length)cur=0;initCollapse(ord,m);
+  const treeChip=`<button class="chip tree ${mode==='tree'?'on':''}" data-tree><svg class="ci" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M4 5v14M4 12h5"/></svg>Visão geral</button>`;
+  $('chips').innerHTML=treeChip+ord.map((s,i)=>`<button class="chip ${mode!=='tree'&&i===cur?'on':''}" data-i="${i}">${esc(s)}<span class="c">${m[s].people.length}</span></button>`).join('');
+  $('chips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{if(b.hasAttribute('data-tree'))mode='tree';else{mode='sup';cur=+b.getAttribute('data-i');}$('search').value='';render();});
+  draw();}
+
+function draw(){if(!ROWS.length){$('panel').innerHTML=diagPanel();return;}const{m,ord}=supList();const q=$('search').value.trim();const nq=q?norm(q):null;const hl=nq?makeHL(nq):null;
+  const list=(mode==='tree'||nq)?ord:[ord[cur]];
+  const forceOpen=(mode==='sup'&&!nq); // aba única: expandida
+  let cards='',shownP=0,shownS=0;
+  list.forEach(su=>{const html=supCard(su,m[su],forceOpen,nq,hl);if(!html)return;cards+=html;shownS++;
+    let roots=buildSup(su,m[su].people);if(nq)roots=roots.filter(r=>keepTree(r,nq));shownP+=nq?roots.reduce((a,r)=>a+countShown(r,nq),0):m[su].people.length;});
+  const info=nq?`${shownP} resultado${shownP!==1?'s':''} para "${esc(q)}"`:`${ROWS.length} pessoas · ${ord.length} superintendências · ${ROWS.filter(r=>roleOf(r.fn).r===1).length} gerentes`;
+  const controls=(mode==='tree'||nq)?`<div class="treebar"><span class="tinfo">${info}</span><div class="tbtns"><button class="tbtn" id="expAll">Expandir tudo</button><button class="tbtn" id="colAll">Recolher tudo</button></div></div>`:'';
+  if(!cards){$('panel').innerHTML=controls+`<div class="snode"><div class="empty"><b>Nada encontrado</b>Tente outro apelido, e-mail, gerente ou superintendência.</div></div>`;wireControls();return;}
+  $('panel').innerHTML=controls+`<div class="tree">${cards}</div>`;wireControls();}
+
+function wireControls(){
+  const ea=$('expAll'),ca=$('colAll');
+  if(ea)ea.onclick=()=>{collapsed.clear();draw();};
+  if(ca)ca.onclick=()=>{const{m,ord}=supList();collapsed.clear();ord.forEach(su=>{collapsed.add('S::'+su);const walk=n=>{if(n.children.length){collapsed.add('N::'+su+'::'+n.ap);n.children.forEach(walk);}};buildSup(su,m[su].people).forEach(walk);});draw();};
+  $('panel').querySelectorAll('.snode-head').forEach(h=>h.onclick=()=>{const n=h.parentElement,id=n.getAttribute('data-id');n.classList.toggle('collapsed');n.classList.contains('collapsed')?collapsed.add(id):collapsed.delete(id);});
+  $('panel').querySelectorAll('.pnode.has > .pn-head').forEach(h=>h.onclick=()=>{const n=h.parentElement,id=n.getAttribute('data-id');n.classList.toggle('collapsed');n.classList.contains('collapsed')?collapsed.add(id):collapsed.delete(id);});
+}
+
+async function fetchRows(url){const res=await fetch(url+'&_='+Date.now());if(!res.ok)throw 0;const txt=await res.text();if(txt.trim().startsWith('<'))throw 0;return fromGrid(parseCSV(txt));}
+async function loadLive(){$('btnRefresh').classList.add('spinning');
+  try{let rows=[];
+    try{rows=await fetchRows(PUB);}catch(e){rows=[];}
+    if(!rows.length&&!DIAG){try{rows=await fetchRows(GVIZ);}catch(e){rows=[];}}
+    if(rows.length){ROWS=rows;src={k:'live',t:'Ao vivo · '+rows.length+' registros'};treeInit=false;}else throw 0;}
+  catch(e){ROWS=[];treeInit=false;src=DIAG?{k:'warn',t:'Colunas não reconhecidas'}:{k:'warn',t:'Sem dados — verifique a publicação'};}
+  finally{$('btnRefresh').classList.remove('spinning');render();}}
+
+const mk=el=>{el.innerHTML=`<defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E2231A"/><stop offset="1" stop-color="#A50F12"/></linearGradient><mask id="lm"><rect width="512" height="512" fill="black"/><g fill="white"><rect x="134" y="360" width="244" height="22" rx="8"/><rect x="150" y="306" width="58" height="70" rx="9"/><rect x="227" y="256" width="58" height="120" rx="9"/><rect x="304" y="196" width="58" height="180" rx="9"/><rect x="322" y="144" width="22" height="56" rx="7"/><rect x="305" y="157" width="56" height="22" rx="7"/></g></mask></defs><rect width="512" height="512" rx="115" fill="url(#lg)"/><rect width="512" height="512" fill="white" mask="url(#lm)"/>`;};
+
+mk($('mk'));
+ROWS=[];
+render();
+$('search').addEventListener('input',()=>draw());
+$('btnRefresh').onclick=loadLive;
+loadLive();
+setInterval(loadLive,POLL_MS);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadLive();});
+</script>
+</body>
+</html>
