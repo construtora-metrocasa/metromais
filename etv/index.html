@@ -131,7 +131,7 @@ const POLL_MS=300000;
 const SNAP_CSV="";
 
 // Superintendências a ignorar (ruído / cadastro incorreto). Edite à vontade.
-const EXCLUIR_SUP=["GUSTAVO","MARIA","METROCASA","ROBERT","SAMARA"];
+const EXCLUIR_SUP=["ARIELLA","GUSTAVO","MARIA","METROCASA","ROBERT","SAMARA"];
 const EXCLUIR_N=new Set(EXCLUIR_SUP.map(s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'')));
 
 const $=id=>document.getElementById(id);
