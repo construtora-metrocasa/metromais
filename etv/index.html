@@ -105,6 +105,11 @@
   .p2c{display:inline-flex;align-items:baseline;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 9px;font-size:11.5px;max-width:100%}
   .p2c i{font-style:normal;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
   .p2c b{font-weight:600;color:var(--ink);font-family:'Sora',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .canalbar{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:11px 14px;box-shadow:var(--shadow);margin-bottom:16px}
+  .canalbar .cl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-bottom:8px}
+  .canalbar .chips{margin-bottom:0}
+  .chip.can.on{background:var(--gold);border-color:var(--gold);color:#3B2E00}
+  .chip.can.all.on{background:var(--red);border-color:var(--red);color:#fff}
   .nomatch{margin-top:14px;border:1px dashed #E0902F;background:var(--warn-bg);border-radius:12px;padding:14px 16px}
   .nomatch h4{font-family:'Sora',sans-serif;font-size:13px;color:var(--warn);margin-bottom:8px}
   .nomatch .row{font-size:12px;color:var(--ink-2);padding:3px 0;border-top:1px solid rgba(224,144,47,.25)}
@@ -143,6 +148,7 @@
   <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="search2" placeholder="Buscar nesta página…" autocomplete="off"></div>
   <div class="srcs" id="srcs2"></div>
   <div class="chips" id="chips2"></div>
+  <div class="canalbar" id="canalbar"></div>
   <div id="panel2"></div>
   </div>
 
@@ -353,11 +359,11 @@ function p2Cells(row){ // mostra só as colunas de dado (sem a chave e sem as oc
   }).filter(Boolean).join('');
 }
 
-function hasP2(n){if(n.real&&p2Of(n.person))return true;return n.children.some(hasP2);}
+function hasP2(n){if(n.real&&p2OfF(n.person))return true;return n.children.some(hasP2);}
 function nodeP2(su,n,nq,hl){
   const kids=n.children.filter(k=>hasP2(k)&&(!nq||keepTreeP2(k,nq))).sort(sortNodes);
   const role=n.real?roleOf(n.person.fn):{t:'Gerente',c:'g'};
-  const row=n.real?p2Of(n.person):null;
+  const row=n.real?p2OfF(n.person):null;
   const has=kids.length>0;
   const lead=has?`<svg class="caret" viewBox="0 0 24 24" style="transform:rotate(90deg)"><path d="m9 18 6-6-6-6"/></svg>`:`<span class="leaf"></span>`;
   const nm=n.real&&n.person.nome?`<span class="full">${hl?hl(n.person.nome):esc(n.person.nome)}</span>`:'';
@@ -370,12 +376,29 @@ function keepTreeP2(n,nq){if(!nq)return true;if(matchNode(n,nq))return true;
   if(n.real){const r=p2Of(n.person);if(r&&r.some(v=>norm(v).includes(nq)))return true;}
   return n.children.some(k=>keepTreeP2(k,nq));}
 
+/* ---- filtro por Canal de Distribuição (valores multivalorados: "Premium;Comum") ---- */
+let canalSel=new Set(); // vazio = todos
+function canalIdx(){let i=P2.headers.findIndex(h=>norm(h).includes('CANAL'));
+  if(i<0)i=P2.headers.findIndex((h,j)=>j!==P2.keyIdx&&!P2_OCULTAR_N.has(norm(h)));
+  return i;}
+function canaisDe(row){if(!row)return[];const i=canalIdx();if(i<0)return[];
+  return String(row[i]||'').split(/[;,|\/]/).map(s=>s.trim()).filter(Boolean);}
+function canalOK(row){if(!canalSel.size)return true;const cs=canaisDe(row).map(norm);
+  if(!cs.length)return canalSel.has('__VAZIO__');
+  return cs.some(c=>canalSel.has(c));}
+function todosCanais(){const set=new Map();let vazio=0;
+  Object.values(P2.map).forEach(row=>{const cs=canaisDe(row);if(!cs.length){vazio++;return;}
+    cs.forEach(c=>{const k=norm(c);set.set(k,{label:c,n:(set.get(k)?.n||0)+1});});});
+  return{lista:[...set.entries()].sort((a,b)=>b[1].n-a[1].n),vazio};}
+
+function p2OfF(p){const r=p2Of(p);return r&&canalOK(r)?r:null;} // respeita o filtro de canal
+
 let mode2='tree', cur2=0;
 function drawP2(){
   const el=$('panel2');
-  if(!ROWS.length){el.innerHTML=diagPanel();$('srcs2').innerHTML='';$('chips2').innerHTML='';return;}
+  if(!ROWS.length){el.innerHTML=diagPanel();$('srcs2').innerHTML='';$('chips2').innerHTML='';$('canalbar').innerHTML='';return;}
   if(!P2.loaded){$('srcs2').innerHTML=`<span class="src warn"><span class="d"></span>Página 2 não carregada${P2.err?' — '+esc(P2.err):''}</span>`;
-    $('chips2').innerHTML='';
+    $('chips2').innerHTML='';$('canalbar').innerHTML='';
     el.innerHTML=`<div class="snode"><div class="empty"><b>Sem dados da Página 2</b>Verifique se a aba está publicada.</div></div>`;return;}
   const matched=Object.keys(P2.map).length;
   $('srcs2').innerHTML=`<span class="src live"><span class="d"></span>PROCV por <b style="margin-left:3px">${esc(P2.headers[P2.keyIdx]||'?')}</b> (${esc(P2.keyType)})</span>`+
@@ -385,7 +408,7 @@ function drawP2(){
   const q=$('search2').value.trim();const nq=q?norm(q):null;const hl=nq?makeHL(nq):null;
   const{m,ord}=supList();
   // conta quantas pessoas de cada superintendência têm registro na Página 2
-  const cnt={};ord.forEach(su=>{cnt[su]=m[su].people.filter(p=>p2Of(p)).length;});
+  const cnt={};ord.forEach(su=>{cnt[su]=m[su].people.filter(p=>p2OfF(p)).length;});
   const ordP2=ord.filter(su=>cnt[su]>0);
   if(cur2>=ordP2.length)cur2=0;
   $('chips2').innerHTML=`<button class="chip tree ${mode2==='tree'?'on':''}" data-tree><svg class="ci" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M4 5v14M4 12h5"/></svg>Visão geral</button>`+
@@ -393,6 +416,21 @@ function drawP2(){
   $('chips2').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
     if(b.hasAttribute('data-tree'))mode2='tree';else{mode2='sup';cur2=+b.getAttribute('data-i');}
     $('search2').value='';drawP2();});
+  // ---- barra de filtro por Canal de Distribuição ----
+  const{lista,vazio}=todosCanais();
+  const allOn=canalSel.size===0;
+  let cb=`<div class="cl">Canal de distribuição</div><div class="chips">`+
+    `<button class="chip can all ${allOn?'on':''}" data-canal="__ALL__">Todos</button>`+
+    lista.map(([k,v])=>`<button class="chip can ${canalSel.has(k)?'on':''}" data-canal="${esc(k)}">${esc(v.label)}<span class="c">${v.n}</span></button>`).join('')+
+    (vazio?`<button class="chip can ${canalSel.has('__VAZIO__')?'on':''}" data-canal="__VAZIO__">(sem canal)<span class="c">${vazio}</span></button>`:'')+
+    `</div>`;
+  $('canalbar').innerHTML=cb;
+  $('canalbar').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
+    const c=b.getAttribute('data-canal');
+    if(c==='__ALL__')canalSel.clear();
+    else{canalSel.has(c)?canalSel.delete(c):canalSel.add(c);}
+    drawP2();});
+
   const list=(mode2==='tree'||nq)?ordP2:[ordP2[cur2]].filter(Boolean);
   let cards='';
   list.forEach(su=>{
