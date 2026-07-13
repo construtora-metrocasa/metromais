@@ -97,6 +97,17 @@
   .snode-head .flagsup{font-size:11px;color:#FFD9A0;font-weight:700;margin-top:3px}
   mark{background:#FFE48A;border-radius:3px;padding:0 2px}
   .empty{padding:40px;text-align:center;color:var(--muted)}.empty b{display:block;color:var(--ink-2);font-family:'Sora',sans-serif;margin-bottom:5px;font-size:15px}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tab{border:none;background:none;padding:11px 14px;font-family:'Sora',sans-serif;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent}
+  .tab:hover{color:var(--ink)}
+  .tab.on{color:var(--red);border-bottom-color:var(--red)}
+  .p2v{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:1;min-width:0}
+  .p2c{display:inline-flex;align-items:baseline;gap:5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 9px;font-size:11.5px;max-width:100%}
+  .p2c i{font-style:normal;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+  .p2c b{font-weight:600;color:var(--ink);font-family:'Sora',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nomatch{margin-top:14px;border:1px dashed #E0902F;background:var(--warn-bg);border-radius:12px;padding:14px 16px}
+  .nomatch h4{font-family:'Sora',sans-serif;font-size:13px;color:var(--warn);margin-bottom:8px}
+  .nomatch .row{font-size:12px;color:var(--ink-2);padding:3px 0;border-top:1px solid rgba(224,144,47,.25)}
   footer{margin-top:22px;text-align:center;font-size:11px;color:var(--muted);line-height:1.7}footer b{color:var(--ink-2)}
   @media (max-width:720px){.kpis{grid-template-columns:1fr}.tb-title .st{display:none}.pn-email{flex-basis:100%;text-align:left;order:5;padding-left:25px}}
 </style>
@@ -117,11 +128,25 @@
 
   <div class="srcs" id="srcs"></div>
 
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-t="estrutura">Estrutura</button>
+    <button class="tab" data-t="p2">Canal de Distribuição</button>
+  </div>
+
+  <div id="view-estrutura">
   <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="search" placeholder="Buscar apelido, nome, e-mail, gerente, superintendente ou diretor…" autocomplete="off"></div>
   <div class="chips" id="chips"></div>
   <div id="panel"></div>
+  </div>
 
-  <footer><b>Metrocasa · Marketing</b> — Prestadores Ativos (ETV) · Superintendente › Gerente › Coordenador › Consultor · papéis pela coluna Função</footer>
+  <div id="view-p2" style="display:none">
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="search2" placeholder="Buscar nesta página…" autocomplete="off"></div>
+  <div class="srcs" id="srcs2"></div>
+  <div class="chips" id="chips2"></div>
+  <div id="panel2"></div>
+  </div>
+
+  <footer><b>Metrocasa · Marketing</b> — Estrutura e Canal de Distribuição · Superintendente › Gerente › Coordenador › Consultor</footer>
 </div>
 
 <script>
@@ -268,6 +293,132 @@ function diagPanel(){
   if(DIAG){return `<div class="snode"><div class="empty"><b>Colunas não reconhecidas</b>Este painel espera os cabeçalhos <b>APELIDO</b>, <b>GERENTE</b> e <b>SUPERINTENDENTE</b> (igual ao ETV). Faltando: ${esc(DIAG.miss.join(', '))||'—'}.<div style="margin-top:14px;font-weight:600;color:var(--ink-2)">Cabeçalhos encontrados na planilha:</div><div style="margin-top:6px">${DIAG.headers.map(pill).join('')||'—'}</div><div style="margin-top:14px;font-size:12.5px">Me diga qual coluna é apelido, qual é gerente e qual é superintendente que eu remapeio.</div></div></div>`;}
   return `<div class="snode"><div class="empty"><b>Aguardando dados ao vivo</b>A planilha é privada — abra este painel em um navegador logado no Google com acesso a ela. Só popula para quem tem permissão.</div></div>`;
 }
+/* ============ PÁGINA 2 · PROCV por hierarquia ============ */
+const PUB_P2="https://docs.google.com/spreadsheets/d/e/2PACX-1vStykIpeFQ4u54thul1w2oSmkzaK-xfSSPdTHqonGQmWZtgIVOOuzBKcXQniyai2fKVUDG8MY-IHHOx/pub?gid=1061156216&single=true&output=csv";
+const P2_OCULTAR=["EMAIL","EMAIL","E-MAIL"]; // colunas da Página 2 que não vão para a tela
+let P2={headers:[],rows:[],keyIdx:-1,keyType:'',map:{},unmatched:[],dupes:[],loaded:false,err:''};
+
+// índices da Página 1 para o PROCV
+function idxP1(){const byAp={},byEm={},byNo={};ROWS.forEach(r=>{if(r.ap)byAp[norm(r.ap)]=r;if(r.em)byEm[norm(r.em)]=r;if(r.nome)byNo[norm(r.nome)]=r;});return{byAp,byEm,byNo};}
+
+// descobre qual coluna da Página 2 é a chave (a que mais casa com a Página 1)
+function detectKey(rows,idx){
+  let best={i:-1,hits:0,type:''};
+  const ncols=Math.max(...rows.map(r=>r.length),0);
+  for(let c=0;c<ncols;c++){
+    const tests=[['apelido',idx.byAp],['email',idx.byEm],['nome',idx.byNo]];
+    tests.forEach(([type,map])=>{
+      let hits=0;rows.forEach(r=>{const v=norm(r[c]);if(v&&map[v])hits++;});
+      if(hits>best.hits)best={i:c,hits,type};
+    });
+  }
+  return best;
+}
+
+async function loadP2(){
+  try{
+    const res=await fetch(PUB_P2+'&_='+Date.now());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const txt=await res.text();
+    if(txt.trim().startsWith('<'))throw new Error('sem acesso');
+    const grid=parseCSV(txt).filter(r=>r.some(c=>String(c).trim()));
+    if(!grid.length)throw new Error('vazia');
+    P2.headers=grid[0].map(x=>String(x).trim());
+    const body=grid.slice(1);
+    const idx=idxP1();
+    const best=detectKey(body,idx);
+    P2.keyIdx=best.i;P2.keyType=best.type;
+    const map={},unmatched=[];
+    const lut=best.type==='email'?idx.byEm:best.type==='nome'?idx.byNo:idx.byAp;
+    const dupes=[];
+    body.forEach(r=>{
+      const k=norm(r[best.i]);
+      const person=k?lut[k]:null;
+      if(person){const mk=norm(person.ap)+'||'+norm(person.em);
+        if(map[mk])dupes.push({key:r[best.i],row:r});
+        map[mk]=r;}
+      else unmatched.push(r);
+    });
+    P2.map=map;P2.unmatched=unmatched;P2.dupes=dupes;P2.rows=body;P2.loaded=true;P2.err='';
+  }catch(e){P2.loaded=false;P2.err=e.message||'falha';}
+  if(tab==='p2')drawP2();
+}
+const p2Of=p=>P2.map[norm(p.ap)+'||'+norm(p.em)]||null;
+
+const P2_OCULTAR_N=new Set(P2_OCULTAR.map(x=>norm(x)));
+function p2Cells(row){ // mostra só as colunas de dado (sem a chave e sem as ocultas)
+  return P2.headers.map((h,i)=>{
+    if(i===P2.keyIdx||P2_OCULTAR_N.has(norm(h)))return null;
+    return `<span class="p2c"><i>${esc(h)}</i><b>${esc(row[i]||'—')}</b></span>`;
+  }).filter(Boolean).join('');
+}
+
+function hasP2(n){if(n.real&&p2Of(n.person))return true;return n.children.some(hasP2);}
+function nodeP2(su,n,nq,hl){
+  const kids=n.children.filter(k=>hasP2(k)&&(!nq||keepTreeP2(k,nq))).sort(sortNodes);
+  const role=n.real?roleOf(n.person.fn):{t:'Gerente',c:'g'};
+  const row=n.real?p2Of(n.person):null;
+  const has=kids.length>0;
+  const lead=has?`<svg class="caret" viewBox="0 0 24 24" style="transform:rotate(90deg)"><path d="m9 18 6-6-6-6"/></svg>`:`<span class="leaf"></span>`;
+  const nm=n.real&&n.person.nome?`<span class="full">${hl?hl(n.person.nome):esc(n.person.nome)}</span>`:'';
+  const vals=row?`<span class="p2v">${p2Cells(row)}</span>`:`<span class="p2v"><span class="p2c" style="border-style:dashed;color:var(--muted)"><b style="color:var(--muted);font-weight:500">sem registro na Página 2</b></span></span>`;
+  const head=`<div class="pn-head">${lead}<span class="pn-name"><span class="ap">${hl?hl(n.ap):esc(n.ap)}</span>${nm}</span><span class="role r-${role.c}">${esc(role.t)}</span>${vals}</div>`;
+  const ch=has?`<div class="pn-children">${kids.map(k=>nodeP2(su,k,nq,hl)).join('')}</div>`:'';
+  return `<div class="pnode ${has?'has':''}">${head}${ch}</div>`;
+}
+function keepTreeP2(n,nq){if(!nq)return true;if(matchNode(n,nq))return true;
+  if(n.real){const r=p2Of(n.person);if(r&&r.some(v=>norm(v).includes(nq)))return true;}
+  return n.children.some(k=>keepTreeP2(k,nq));}
+
+let mode2='tree', cur2=0;
+function drawP2(){
+  const el=$('panel2');
+  if(!ROWS.length){el.innerHTML=diagPanel();$('srcs2').innerHTML='';$('chips2').innerHTML='';return;}
+  if(!P2.loaded){$('srcs2').innerHTML=`<span class="src warn"><span class="d"></span>Página 2 não carregada${P2.err?' — '+esc(P2.err):''}</span>`;
+    $('chips2').innerHTML='';
+    el.innerHTML=`<div class="snode"><div class="empty"><b>Sem dados da Página 2</b>Verifique se a aba está publicada.</div></div>`;return;}
+  const matched=Object.keys(P2.map).length;
+  $('srcs2').innerHTML=`<span class="src live"><span class="d"></span>PROCV por <b style="margin-left:3px">${esc(P2.headers[P2.keyIdx]||'?')}</b> (${esc(P2.keyType)})</span>`+
+    `<span class="src snap"><span class="d"></span>${matched} de ${P2.rows.length} linha(s) casaram</span>`+
+    (P2.unmatched.length?`<span class="src warn"><span class="d"></span>${P2.unmatched.length} sem correspondência</span>`:'')+
+    (P2.dupes.length?`<span class="src warn"><span class="d"></span>${P2.dupes.length} duplicada(s): ${esc(P2.dupes.slice(0,6).map(d=>d.key).join(', '))}${P2.dupes.length>6?'…':''}</span>`:'');
+  const q=$('search2').value.trim();const nq=q?norm(q):null;const hl=nq?makeHL(nq):null;
+  const{m,ord}=supList();
+  // conta quantas pessoas de cada superintendência têm registro na Página 2
+  const cnt={};ord.forEach(su=>{cnt[su]=m[su].people.filter(p=>p2Of(p)).length;});
+  const ordP2=ord.filter(su=>cnt[su]>0);
+  if(cur2>=ordP2.length)cur2=0;
+  $('chips2').innerHTML=`<button class="chip tree ${mode2==='tree'?'on':''}" data-tree><svg class="ci" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M4 5v14M4 12h5"/></svg>Visão geral</button>`+
+    ordP2.map((s,i)=>`<button class="chip ${mode2!=='tree'&&i===cur2?'on':''}" data-i="${i}">${esc(s)}<span class="c">${cnt[s]}</span></button>`).join('');
+  $('chips2').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
+    if(b.hasAttribute('data-tree'))mode2='tree';else{mode2='sup';cur2=+b.getAttribute('data-i');}
+    $('search2').value='';drawP2();});
+  const list=(mode2==='tree'||nq)?ordP2:[ordP2[cur2]].filter(Boolean);
+  let cards='';
+  list.forEach(su=>{
+    let roots=buildSup(su,m[su].people).filter(hasP2);
+    if(nq)roots=roots.filter(r=>keepTreeP2(r,nq));
+    roots.sort(sortNodes);
+    if(!roots.length)return;
+    const own=m[su].own;
+    cards+=`<div class="snode"><div class="snode-head"><svg class="caret" viewBox="0 0 24 24" style="transform:rotate(90deg)"><path d="m9 18 6-6-6-6"/></svg><div class="sh-t"><div class="eb">Superintendência</div><h3>${esc(m[su].name)}</h3><div class="dir">${own&&own.nome?esc(own.nome)+' · ':''}Diretor(a): ${esc(m[su].dir||'—')}</div></div><div class="p-metrics"><div class="pm"><b>${cnt[su]}</b><span>Com canal</span></div></div></div><div class="schildren">${roots.map(r=>nodeP2(su,r,nq,hl)).join('')}</div></div>`;
+  });
+  let un='';
+  if(P2.unmatched.length&&(mode2==='tree'||nq)){
+    un=`<div class="nomatch"><h4>⚠ ${P2.unmatched.length} linha(s) da Página 2 sem correspondência na Página 1</h4>`+
+      P2.unmatched.slice(0,50).map(r=>`<div class="row">${P2.headers.map((h,i)=>`<b>${esc(h)}:</b> ${esc(r[i]||'—')}`).join(' · ')}</div>`).join('')+
+      (P2.unmatched.length>50?`<div class="row">…e mais ${P2.unmatched.length-50}</div>`:'')+`</div>`;
+  }
+  el.innerHTML=(cards?`<div class="tree">${cards}</div>`:`<div class="snode"><div class="empty"><b>Nenhuma correspondência</b>Nenhuma pessoa desta seleção tem registro na Página 2.</div></div>`)+un;
+}
+
+let tab='estrutura';
+function showTab(t){tab=t;
+  $('view-estrutura').style.display=t==='estrutura'?'block':'none';
+  $('view-p2').style.display=t==='p2'?'block':'none';
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.getAttribute('data-t')===t));
+  if(t==='p2')drawP2();else draw();}
+
 function render(){renderKPIs();renderSrc();const{m,ord}=supList();if(cur>=ord.length)cur=0;initCollapse(ord,m);
   const treeChip=`<button class="chip tree ${mode==='tree'?'on':''}" data-tree><svg class="ci" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M4 5v14M4 12h5"/></svg>Visão geral</button>`;
   $('chips').innerHTML=treeChip+ord.map((s,i)=>`<button class="chip ${mode!=='tree'&&i===cur?'on':''}" data-i="${i}">${esc(s)}<span class="c">${m[s].people.length}</span></button>`).join('');
@@ -308,9 +459,12 @@ mk($('mk'));
 ROWS=[];
 render();
 $('search').addEventListener('input',()=>draw());
-$('btnRefresh').onclick=loadLive;
-loadLive();
-setInterval(loadLive,POLL_MS);
+$('search2').addEventListener('input',()=>drawP2());
+$('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.getAttribute('data-t')));
+async function loadAll(){await loadLive();await loadP2();if(tab==='p2')drawP2();}
+$('btnRefresh').onclick=loadAll;
+loadAll();
+setInterval(loadAll,POLL_MS);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadLive();});
 </script>
 </body>
