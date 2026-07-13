@@ -117,7 +117,7 @@
 
   <div class="srcs" id="srcs"></div>
 
-  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="search" placeholder="Buscar apelido, nome, e-mail, gerente ou superintendência…" autocomplete="off"></div>
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="search" placeholder="Buscar apelido, nome, e-mail, gerente, superintendente ou diretor…" autocomplete="off"></div>
   <div class="chips" id="chips"></div>
   <div id="panel"></div>
 
@@ -131,7 +131,7 @@ const POLL_MS=300000;
 const SNAP_CSV="";
 
 // Superintendências a ignorar (ruído / cadastro incorreto). Edite à vontade.
-const EXCLUIR_SUP=["ARIELLA","GUSTAVO","MARIA","METROCASA","ROBERT","SAMARA"];
+const EXCLUIR_SUP=["ARIELLA","ARIELA","GUSTAVO","MARIA","METROCASA","ROBERT","SAMARA"];
 const EXCLUIR_N=new Set(EXCLUIR_SUP.map(s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'')));
 
 const $=id=>document.getElementById(id);
@@ -159,7 +159,7 @@ function fromGrid(grid){
     const ap=(row[m.apelido]||'').trim(),su=(row[m.superint]||'').trim(),ge=(row[m.gerente]||'').trim();
     if(!ap||!su)continue;                      // gerente pode ser vazio (o superintendente não tem gerente acima)
     STATS.total++;
-    if(EXCLUIR_N.has(norm(su))){STATS.excluidos++;continue;}
+    if(EXCLUIR_N.has(norm(su))||EXCLUIR_N.has(norm(ap))||EXCLUIR_N.has(norm(ge))){STATS.excluidos++;continue;}
     if(m.situacao>=0&&!isAtivo(row[m.situacao])){STATS.inativos++;continue;}
     out.push({ap,nome:(m.nome>=0?row[m.nome]||'':'').trim(),ge,su,dir:(m.diretor>=0?row[m.diretor]||'':'').trim(),fn:(m.funcao>=0?row[m.funcao]||'':'').trim(),em:(m.email>=0?row[m.email]||'':'').trim()});}
   return out;
@@ -207,7 +207,7 @@ function rank(n){return n.real?roleOf(n.person.fn).r:1;} // sintético tratado c
 function sortNodes(a,b){const r=rank(a)-rank(b);return r||a.ap.localeCompare(b.ap,'pt');}
 function countPeople(n){let c=n.real?1:0;n.children.forEach(k=>c+=countPeople(k));return c;}
 
-function matchNode(n,nq){if(!nq)return true;if(n.real){const p=n.person;return[p.ap,p.nome,p.em,p.ge,p.su,p.fn].some(v=>norm(v).includes(nq));}return norm(n.ap).includes(nq);}
+function matchNode(n,nq){if(!nq)return true;if(n.real){const p=n.person;return[p.ap,p.nome,p.em,p.ge,p.su,p.fn,p.dir].some(v=>norm(v).includes(nq));}return norm(n.ap).includes(nq);}
 function keepTree(n,nq){if(!nq)return true;if(matchNode(n,nq))return true;return n.children.some(k=>keepTree(k,nq));}
 
 function nodeHTML(su,n,hl,nq,forceOpen){
