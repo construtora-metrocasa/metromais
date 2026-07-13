@@ -1,0 +1,210 @@
+-- ============================================================
+-- Matriz de alcada do CALCULO PROPOSTA (D55) - Motor de Calculo
+-- Fonte: Calculo_Proposta.7.9.xlsx - CALCULO!A3:L36 + PROCVS!J:K
+-- Correcoes: alc4 1D+OFFICE garantido_ok 20000->200000;
+--            duplicatas de linhas de aprovacao removidas (unique key)
+-- ============================================================
+
+create table if not exists regra_alcada (
+  id serial primary key,
+  alcada int not null,
+  tipologia text not null,
+  tipo text not null default 'NORMAL',
+  metragem numeric not null,
+  requer_aprovacao boolean not null default false,
+  m2_venda_ok numeric,
+  m2_prechaves_ok numeric,
+  garantido_ok numeric,
+  pos_chaves_meses int,
+  pct_pos_chaves numeric,
+  unique (alcada, tipologia, tipo, metragem)
+);
+
+create table if not exists empreendimento_alcada (
+  empreendimento text primary key,
+  alcada int not null
+);
+
+create table if not exists tipologia_sem_alcada (
+  tipologia text primary key
+);
+
+alter table regra_alcada enable row level security;
+alter table empreendimento_alcada enable row level security;
+alter table tipologia_sem_alcada enable row level security;
+
+drop policy if exists "leitura autenticada" on regra_alcada;
+create policy "leitura autenticada" on regra_alcada for select to authenticated using (true);
+drop policy if exists "leitura autenticada" on empreendimento_alcada;
+create policy "leitura autenticada" on empreendimento_alcada for select to authenticated using (true);
+drop policy if exists "leitura autenticada" on tipologia_sem_alcada;
+create policy "leitura autenticada" on tipologia_sem_alcada for select to authenticated using (true);
+
+-- seed (idempotente)
+truncate regra_alcada, empreendimento_alcada, tipologia_sem_alcada;
+
+insert into regra_alcada (alcada,tipologia,tipo,metragem,requer_aprovacao,m2_venda_ok,m2_prechaves_ok,garantido_ok,pos_chaves_meses,pct_pos_chaves) values
+(1,'STUDIO','NORMAL',19.5,false,9412,8000,115000,48,0.1),
+(1,'STUDIO','RET1',19.5,false,9412,8000,115000,48,0.1),
+(1,'STUDIO','NORMAL',24,false,8500,7700,150000,48,0.1),
+(1,'STUDIO','NORMATIVO',24,false,8500,7700,150000,48,0.1),
+(1,'1D','NORMAL',23.5,true,null,null,null,null,null),
+(1,'1D + OFFICE','NORMAL',27,false,7556,7000,160000,48,0.05),
+(1,'1D + OFFICE','NORMATIVO',27,false,7556,7000,160000,48,0.05),
+(1,'2D','NORMAL',35,true,null,null,null,null,null),
+(1,'DUPLEX 1D','NORMAL',45,true,null,null,null,null,null),
+(1,'DUPLEX 2D','NORMAL',45,true,null,null,null,null,null),
+(2,'STUDIO','NORMAL',19.5,false,10588,9000,120000,36,0.1),
+(2,'STUDIO','RET1',19.5,false,10588,9000,120000,36,0.1),
+(2,'STUDIO','NORMAL',24,false,7500,9500,160000,36,0.1),
+(2,'STUDIO','NORMATIVO',24,false,7500,9500,160000,36,0.1),
+(2,'1D','NORMAL',23.5,true,null,null,null,null,null),
+(2,'1D + OFFICE','NORMAL',27,false,8148,7100,170000,36,0.05),
+(2,'1D + OFFICE','NORMATIVO',27,false,8148,7100,170000,36,0.05),
+(3,'STUDIO','NORMAL',19.5,false,11176,10000,130000,36,0.05),
+(3,'STUDIO','RET1',19.5,false,11176,10000,130000,36,0.05),
+(3,'STUDIO','NORMAL',24,false,8179,9100,180000,36,0.05),
+(3,'STUDIO','NORMATIVO',24,false,8179,9100,180000,36,0.05),
+(3,'1D + OFFICE','NORMAL',27,false,8481.48,7700,180000,36,0.05),
+(3,'1D + OFFICE','NORMATIVO',27,false,8481.48,7700,180000,36,0.05),
+(4,'STUDIO','NORMAL',19.5,false,11111,10500,150000,36,0.05),
+(4,'STUDIO','RET1',19.5,false,11111,10500,150000,36,0.05),
+(4,'STUDIO','NORMAL',24,false,10188,9700,200000,36,0.05),
+(4,'STUDIO','NORMATIVO',24,false,10188,9700,200000,36,0.05),
+(4,'1D + OFFICE','NORMAL',27,false,9074,8300,200000,36,0.05),
+(4,'1D + OFFICE','NORMATIVO',27,false,9074,8200,200000,36,0.05);
+
+insert into empreendimento_alcada (empreendimento,alcada) values
+('CLUBE CANGAIBA',1),
+('VIVA CAMPO LIMPO',1),
+('ESTACAO PERUS',1),
+('SAO MIGUEL PAULISTA',1),
+('AMADOR BUENO',6),
+('ESTACAO PIRITUBA',1),
+('VILA CLARICE',1),
+('ERMELINO MATARAZZO',1),
+('CAPAO REDONDO',1),
+('JACANA II',1),
+('PRIME SAPOPEMBA',2),
+('AVENIDA VILA EMA',2),
+('PRIME VILA EMA - FASE 1',2),
+('ESTACAO VILA TOLSTOI',2),
+('PARQUE NABUCO',2),
+('VIVA ITAQUERA',2),
+('PARQUE ECOLOGICO',2),
+('PRIME VILA EMA - FASE 2',2),
+('CLUBE ITAQUERA',2),
+('AVENIDA ITAQUERA',2),
+('CUPECE',2),
+('VISTA CUPECE FASE 1',2),
+('VISTA CUPECE FASE 2',2),
+('ESTACAO JOAO PAULO I',2),
+('SACOMA II',2),
+('SAPOPEMBA',2),
+('PQ DO CARMO',2),
+('PQ DO CARMO FASE 2',2),
+('PQ DO CARMO FASE 3',2),
+('VILA DAS BELEZAS II',2),
+('ESTACAO VILA DAS BELEZAS',2),
+('CANGAIBA II',2),
+('ESTACAO ITABERABA',2),
+('ESTACAO PATRIARCA',3),
+('ESTACAO ORATORIO',3),
+('VILA CARRAO',3),
+('ORATORIO',3),
+('PENHA II',3),
+('PENHA DE FRANCA',3),
+('VIVA PENHA',3),
+('REAL PARQUE',3),
+('ESTACAO GIOVANNI GRONCHI',3),
+('ARTUR ALVIM',3),
+('ESTACAO SACOMA',3),
+('ESTACAO PENHA',3),
+('GUILHERMINA ESPERANCA',3),
+('TUCURUVI',3),
+('VIVA PIRITUBA',3),
+('ESTACAO VILA PRUDENTE',3),
+('INTERLAGOS',3),
+('ESTACAO JOAO DIAS',3),
+('FREGUESIA DO O',3),
+('PANAMBY',3),
+('VILA RE',3),
+('PARQUE INDEPENDENCIA',4),
+('PRIME SAUDE',4),
+('SANTANA',4),
+('VILA GUILHERME',4),
+('PRACA DA ARVORE',4),
+('JARDIM BOTANICO',4),
+('JAGUARE',4),
+('ALTO DO IPIRANGA',4),
+('ESTACAO VILA SONIA',4),
+('VILA PRUDENTE II',4),
+('SAUDE',4),
+('ALTO DA BOA VISTA',4),
+('BUTANTA',4),
+('CAMBUCI',4),
+('SAO JOAQUIM',4),
+('CIDADE UNIVERSITARIA',4),
+('LIBERDADE',4),
+('ESTACAO LAPA',4),
+('CAMPO BELO',4),
+('BARRA FUNDA',4),
+('PAULISTA',4),
+('REPUBLICA',4),
+('JARAGUA',6),
+('VILA DOS REMEDIOS',6),
+('SANTO AMARO',6),
+('ITAQUERA III',6),
+('ARICANDUVA',6),
+('PIRITUBA II',6),
+('PIRITUBA',6),
+('DOM BOSCO',6),
+('ESTACAO MOOCA',6),
+('VILA DAS BELEZAS',6),
+('JACANA',6),
+('SAO MIGUEL',6),
+('VILA SONIA II',6),
+('CAMPO LIMPO',6),
+('CASA VERDE',6),
+('CENTRO',6),
+('ITAQUERA II',6),
+('MOOCA',6),
+('MORUMBI II',6),
+('VILA EMA II',6),
+('VILA SONIA',6),
+('BERRINI',6),
+('SANTA CRUZ',6),
+('ACLIMACAO',6),
+('ALTO DE PINHEIROS',4),
+('NOVE DE JULHO',6),
+('CANGAIBA',6),
+('LAPA',6),
+('MORUMBI',6),
+('PARQUE SAO DOMINGOS',6),
+('PATRIARCA',6),
+('PENHA',6),
+('SACOMA',6),
+('VILA EMA',6),
+('VILA MATILDE',6),
+('VILA PRUDENTE',6),
+('CONGONHAS',6),
+('GIOVANNI GRONCHI',6),
+('IPIRANGA',6),
+('ITAQUERA',6),
+('PRIME ALTO DO IPIRANGA',4),
+('BOSQUE GIOVANNI GRONCHI',2),
+('CLUBE ANALIA FRANCO',4),
+('PRIME SANTANA',4),
+('CLUBE IPIRANGA',4),
+('ESTACAO SAPOPEMBA',2);
+
+insert into tipologia_sem_alcada (tipologia) values
+('1D'),
+('2D'),
+('DUPLEX 2D'),
+('PENTHOUSE STUDIO'),
+('GARDEN STUDIO'),
+('DUPLEX STUDIO'),
+('PENTHOUSE 1D + OFFICE'),
+('GARDEN 1D + OFFICE'),
+('GARDEN 2D');
