@@ -252,11 +252,12 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
 .printonly{display:none}
 @media print{
  body{background:#fff;padding:0}
- .topbar,.wrap>*:not(.printonly-wrap),.page>*:not(.printonly-wrap){display:none!important}
+ .topbar,.kpibar,.wrap>*:not(.printonly-wrap),.page>*:not(.printonly-wrap){display:none!important}
  .printonly{display:block}
  .page{padding:0;max-width:none}
- .pv-page{page-break-inside:avoid}
- @page{margin:10mm}
+ .pv-page{page-break-inside:avoid;padding:10mm 12mm}
+ /* margem 0 remove o cabeçalho/rodapé do navegador (data/título/URL) */
+ @page{margin:0}
 }
 .pv-page{max-width:760px;margin:0 auto;padding:20px 26px;font-family:Georgia,'Times New Roman',serif;color:#111;font-size:13px}
 .pv-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--red);padding-bottom:10px;margin-bottom:14px}
@@ -269,6 +270,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
 .pv-table td{padding:5px 6px;border-bottom:1px solid #eee}
 .pv-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-family:-apple-system,sans-serif}
 .pv-grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;font-family:-apple-system,sans-serif}
+.pv-grid5{display:grid;grid-template-columns:1.3fr 1fr 1fr .9fr .9fr;gap:8px;font-family:-apple-system,sans-serif}
+.pv-pendline{font-family:-apple-system,sans-serif;font-size:10.5px;font-weight:700;color:#A32020;background:#FDEDED;border-radius:5px;padding:4px 9px;margin-top:4px}
 .pv-box{background:#F7F5F2;border-radius:7px;padding:6px 9px}
 .pv-box .k{font-size:8.5px;text-transform:uppercase;color:#888;margin-bottom:2px}
 .pv-box .v{font-size:12.5px;font-weight:800}
@@ -579,6 +582,7 @@ function addMo(d,n){var x=new Date(d.getTime());x.setMonth(x.getMonth()+n);retur
 function parseISO(v){if(!v)return null;var p=String(v).split('-');if(p.length<3)return null;return new Date(+p[0],+p[1]-1,+p[2])}
 function moIdx(d){return (d.getFullYear()-TODAY.getFullYear())*12+(d.getMonth()-TODAY.getMonth())}
 function dlab(d){return MESES[d.getMonth()]+'/'+String(d.getFullYear()).slice(2)}
+function dfull(d){var m=d.getMonth()+1,da=d.getDate();return (da<10?'0':'')+da+'/'+(m<10?'0':'')+m+'/'+String(d.getFullYear()).slice(2)}
 function mesLab(iso){if(!iso)return'—';var p=String(iso).split('-');if(p.length<2)return iso;return MESES[(+p[1])-1]+'/'+p[0]}
 /* ===== datas padrão: todo pagamento vence no dia 10 =====
    MENSAIS: dia 10 seguinte à data-base · ANUAIS: sempre 10 de dezembro ·
@@ -760,7 +764,7 @@ function calc(){
  var entrega=parseISO(g('entrega').value)||addMo(TODAY,18);
  var entMo=Math.max(moIdx(entrega),0);
  var soma=0,gar=0,mensal=0,ato=0,psPre=0,psPos=0,finMeses=0,finMensal=0,mensaisOver=false,
-     posTotal=0,posMeses=0,posMaxV=0,anuMaxV=0,anos=[],mensaisRanges=[],fluxExtras=false,temCaixaParc=false,posDtBad=[];
+     posTotal=0,posMeses=0,posMaxV=0,anuMaxV=0,anos=[],anosPos=[],mensaisRanges=[],fluxExtras=false,temCaixaParc=false,posDtBad=[];
  document.querySelectorAll('#flux .prow').forEach(function(r){
   var tp=r.querySelector('.ptipo').value,qt=parseInt(r.querySelector('.pqtd').value)||0,vl=cur(r.querySelector('.pvalor').value),tot=r2(qt*vl);
   r.querySelector('.ptotal').textContent=brl(tot);soma=r2(soma+tot);
@@ -792,8 +796,11 @@ function calc(){
      if(qt>1){for(var k=0;k<qt;k++){var mi=moIdx(addMo(d,k));if(mi<0)continue;if(mi>entMo)mensaisOver=true}}
      else{var mm=moIdx(d);if(mm>entMo)mensaisOver=true}}
     else if(tp==='MENSAIS PÓS'){posTotal+=tot;if(qt>posMeses)posMeses=qt;if(vl>posMaxV)posMaxV=vl}
-    else if(tp==='ANUAIS'||tp==='ANUAIS PÓS'){if(vl>anuMaxV)anuMaxV=vl;for(var k4=0;k4<Math.max(qt,1);k4++){anos.push(addMo(d,12*k4).getFullYear())}}
-    else if(tp==='ÚNICA'||tp==='ÚNICA PÓS'){if(vl>anuMaxV)anuMaxV=vl;anos.push(d.getFullYear())}
+    /* reforços anuais: pré e pós têm calendários SEPARADOS — uma ÚNICA (pré) pode
+       coexistir com uma ANUAL PÓS no mesmo ano; duplicidade só conta dentro do grupo */
+    else if(tp==='ANUAIS'||tp==='ANUAIS PÓS'){if(vl>anuMaxV)anuMaxV=vl;
+     for(var k4=0;k4<Math.max(qt,1);k4++)(tp==='ANUAIS'?anos:anosPos).push(addMo(d,12*k4).getFullYear())}
+    else if(tp==='ÚNICA'||tp==='ÚNICA PÓS'){if(vl>anuMaxV)anuMaxV=vl;(tp==='ÚNICA'?anos:anosPos).push(d.getFullYear())}
    }}
  });
  var mensaisOverlap=false;
@@ -824,7 +831,8 @@ function calc(){
  var pr=posRule(g('tipologia').value),pctPos=venda?posTotal/venda*100:0;
  var pos10=renda*(RULES.posPctRenda/100),cPos10=(posMaxV<=pos10+0.5);
  var cPos=(posTotal<=0)||(Math.round(pctPos*10)/10<=pr.pct&&posMeses<=pr.meses&&cPos10);
- var anosOk=true,seenA={};for(var ai=0;ai<anos.length;ai++){if(seenA[anos[ai]]){anosOk=false;break}seenA[anos[ai]]=1}
+ function dupAno(arr){var s={};for(var ai=0;ai<arr.length;ai++){if(s[arr[ai]])return true;s[arr[ai]]=1}return false}
+ var anosOk=!dupAno(anos)&&!dupAno(anosPos);
  var anuMult=(fgtsOn()?RULES.anuMultFgts:RULES.anuMultBase)/100,anuCap=renda*anuMult,cAnuV=(anuMaxV<=anuCap+0.5),cAno=anosOk&&cAnuV;
  var cR=renda>=RULES.rendaMin,cE=ato>=RULES.entradaMin,cC=renda>0&&compR<=lim,cT=venda<=teto,cF=Math.abs(falta)<1,cM=!mensaisOver,cMS=!mensaisOverlap;
  var cForma=tvenda==='CEF'||!temCaixaParc;
@@ -858,7 +866,7 @@ function calc(){
  chk('mseq',cMS,cMS?'Sequências mensais sem sobreposição':'Duas sequências "MENSAIS" se sobrepõem no mesmo período — ajuste as datas');
  var posTag=pr.matriz?' · alç '+pr.alcada:'';
  chk('pos',cPos,posTotal<=0?'Sem mensais pós-chaves':(!cPos10?'Mensal pós '+brl(posMaxV)+' acima de 10% da renda ('+brl(pos10)+')':(cPos?'Pós-chaves '+pctPos.toFixed(0)+'% ≤ '+pr.pct+'% · '+posMeses+'/'+pr.meses+'m'+posTag:'Pós-chaves acima do limite — até '+pr.pct+'% do VGV e '+pr.meses+' meses'+posTag)));
- chk('ano',cAno,!cAnuV?('Anuais/Única '+brl(anuMaxV)+' acima de '+(anuMult*100).toFixed(0)+'% da renda ('+brl(anuCap)+')'):(cAno?'Anuais/Única ≤ '+(anuMult*100).toFixed(0)+'% renda · anos distintos':'Anuais/Única não podem vencer no mesmo ano'));
+ chk('ano',cAno,!cAnuV?('Anuais/Única '+brl(anuMaxV)+' acima de '+(anuMult*100).toFixed(0)+'% da renda ('+brl(anuCap)+')'):(cAno?'Anuais/Única ≤ '+(anuMult*100).toFixed(0)+'% renda · anos distintos (pré e pós separados)':'Dois reforços do mesmo grupo (pré ou pós) no mesmo ano — ajuste as datas'));
  chk('forma',cForma,cForma?(tvenda==='CEF'?'Venda CAIXA — financiamento/FGTS/subsídio permitidos':'Fluxo compatível com venda '+(tvenda==='À VISTA'?'à vista':'direta')):'FGTS, subsídio e financiamento são parcelas de venda CAIXA — remova-os ou mude a forma de venda para Financiado CEF');
  var alcTag=RR.row?' · alç '+RR.alcada+' '+RR.row.tipologia+' '+String(RR.row.metragem).replace('.',',')+'m²':'';
  chk('vgvm2',cVgv,RR.row?(cVgv?'VGV: OK — '+brl(vgvM2)+'/m² acima do mín '+brl(RR.row.m2_venda_ok)+'/m²'+alcTag:'VGV: FORA — '+brl(vgvM2)+'/m² ≤ mín '+brl(RR.row.m2_venda_ok)+'/m²'+alcTag):'VGV/m² sem matriz — '+(RR.motivo||'selecione empreendimento e unidade'));
@@ -910,7 +918,10 @@ function allocFlow(c,useFgts){
   if(entr>0)sug.push(['ATO',1,entr,'']);
   if(compl>0)sug.push(['COMP. ENTRADA',1,compl,'']);
   return{sug:sug,alertEntrada:false,leftover:0}}
- var usados={};(c.anosUsados||[]).forEach(function(y){usados[y]=1});
+ /* calendários separados: reforços PRÉ não conflitam com reforços PÓS no mesmo ano */
+ var usadosPre={},usadosPos={};
+ (c.anosUsadosPre||[]).forEach(function(y){usadosPre[y]=1});
+ (c.anosUsadosPos||[]).forEach(function(y){usadosPos[y]=1});
  var atoBase=r2(Math.max(0,RULES.entradaMin-c.curAto));r=r2(r-atoBase);
  /* 1) FGTS — tudo que der */
  var fgtsv=0;if(caixa&&useFgts&&c.fgtsFlag&&!c.hasFgts&&r>0.005){fgtsv=r2(Math.min(r,c.venda*0.05));r=r2(r-fgtsv)}
@@ -932,12 +943,12 @@ function allocFlow(c,useFgts){
  var anV=0,anN=0,anIso='';
  if(!c.temPre&&r>0.005&&acap>0){
   var aStart=nextDec10(TODAY);
-  while(aStart<=c.entDate&&usados[aStart.getFullYear()])aStart=new Date(aStart.getFullYear()+1,11,10);
+  while(aStart<=c.entDate&&usadosPre[aStart.getFullYear()])aStart=new Date(aStart.getFullYear()+1,11,10);
   var maxA=0,dA=new Date(aStart.getTime());
-  while(dA<=c.entDate&&!usados[dA.getFullYear()]&&maxA<8){maxA++;dA=new Date(dA.getFullYear()+1,11,10)}
+  while(dA<=c.entDate&&!usadosPre[dA.getFullYear()]&&maxA<8){maxA++;dA=new Date(dA.getFullYear()+1,11,10)}
   if(maxA>0){var useA=Math.min(r,r2(maxA*acap));anN=Math.max(1,Math.ceil(useA/acap));if(anN>maxA)anN=maxA;
    anV=fl2(useA/anN);if(anV<0.01){anV=0;anN=0}else{r=r2(r-r2(anV*anN));anIso=isoOf(aStart);
-    for(var yy=0;yy<anN;yy++)usados[aStart.getFullYear()+yy]=1}}
+    for(var yy=0;yy<anN;yy++)usadosPre[aStart.getFullYear()+yy]=1}}
  }
  /* 6) MENSAIS PÓS — prioridade do complemento (teto % do VGV da matriz + ≤10% da renda) */
  var posCap=r2(Math.max(0,c.venda*c.pr.pct/100-c.curPos)),pcapM=fl2((c.renda||0)*(RULES.posPctRenda/100));
@@ -952,18 +963,18 @@ function allocFlow(c,useFgts){
  var posFim=addMo(c.entDate,c.pr.meses);
  if(r>0.005&&acap>0){
   var pStart=nextDec10(c.entDate);
-  while(pStart<=posFim&&usados[pStart.getFullYear()])pStart=new Date(pStart.getFullYear()+1,11,10);
+  while(pStart<=posFim&&usadosPos[pStart.getFullYear()])pStart=new Date(pStart.getFullYear()+1,11,10);
   var maxP=0,dP=new Date(pStart.getTime());
-  while(dP<=posFim&&!usados[dP.getFullYear()]&&maxP<8){maxP++;dP=new Date(dP.getFullYear()+1,11,10)}
+  while(dP<=posFim&&!usadosPos[dP.getFullYear()]&&maxP<8){maxP++;dP=new Date(dP.getFullYear()+1,11,10)}
   if(maxP>0){var useAP=Math.min(r,r2(maxP*acap));anPosN=Math.max(1,Math.ceil(useAP/acap));if(anPosN>maxP)anPosN=maxP;
    anPosV=fl2(useAP/anPosN);if(anPosV<0.01){anPosV=0;anPosN=0}else{r=r2(r-r2(anPosV*anPosN));anPosIso=isoOf(pStart);
-    for(var y2=0;y2<anPosN;y2++)usados[pStart.getFullYear()+y2]=1}}
+    for(var y2=0;y2<anPosN;y2++)usadosPos[pStart.getFullYear()+y2]=1}}
  }
  /* 8) ÚNICA pré — 10/jun do último ano (ou dia 10 anterior à entrega), ano livre */
  var uniV=0,uniIso='';
  if(!c.temPre&&r>0.005&&acap>0){
   var uD=unicaDate(c.entDate);
-  if(uD&&!usados[uD.getFullYear()]){uniV=r2(Math.min(r,acap));uniIso=isoOf(uD);r=r2(r-uniV);usados[uD.getFullYear()]=1}
+  if(uD&&!usadosPre[uD.getFullYear()]){uniV=r2(Math.min(r,acap));uniIso=isoOf(uD);r=r2(r-uniV);usadosPre[uD.getFullYear()]=1}
  }
  /* 9) ÚNICA PÓS — preferência: 10/jun (do ano da entrega se ainda cair depois dela,
     senão junhos seguintes); alternativa: o dia 10 imediatamente após a entrega */
@@ -974,8 +985,8 @@ function allocFlow(c,useFgts){
   candU.push(nextDay10(c.entDate));
   for(var jy=1;jy<=6;jy++)candU.push(new Date(c.entDate.getFullYear()+jy,5,10));
   for(var ci=0;ci<candU.length;ci++){var cd=candU[ci];
-   if(cd>c.entDate&&cd<=posFim&&!usados[cd.getFullYear()]){
-    uniPosV=r2(Math.min(r,acap));uniPosIso=isoOf(cd);r=r2(r-uniPosV);usados[cd.getFullYear()]=1;break}}
+   if(cd>c.entDate&&cd<=posFim&&!usadosPos[cd.getFullYear()]){
+    uniPosV=r2(Math.min(r,acap));uniPosIso=isoOf(cd);r=r2(r-uniPosV);usadosPos[cd.getFullYear()]=1;break}}
  }
  /* 10) o que não coube volta pra ENTRADA (e alerta se passou do mínimo) */
  var leftover=r2(Math.max(0,r));
@@ -994,7 +1005,7 @@ function allocFlow(c,useFgts){
 function suggest(){
  var venda=cur(g('venda').value),renda=rendaTot();
  var ent=parseISO(g('entrega').value)||addMo(TODAY,18);
- var entMo=Math.max(moIdx(ent),0),soma=0,curAto=0,curMensal=0,curPos=0,hasSub=false,hasFin=false,hasFgts=false,temPre=false,anosUsados=[];
+ var entMo=Math.max(moIdx(ent),0),soma=0,curAto=0,curMensal=0,curPos=0,hasSub=false,hasFin=false,hasFgts=false,temPre=false,anosUsadosPre=[],anosUsadosPos=[];
  document.querySelectorAll('#flux .prow').forEach(function(r){
   var tp=r.querySelector('.ptipo').value,qt=parseInt(r.querySelector('.pqtd').value)||0,vl=cur(r.querySelector('.pvalor').value);
   soma=r2(soma+r2(qt*vl));
@@ -1004,14 +1015,14 @@ function suggest(){
   if(tp==='SUBSÍDIO')hasSub=true;if(tp==='FGTS')hasFgts=true;if(FINSET.indexOf(tp)>=0)hasFin=true;
   if(PSPRE.indexOf(tp)>=0&&qt*vl>0)temPre=true;
   var d0=parseISO(r.querySelector('.pdata').value);
-  if(d0&&(tp==='ANUAIS'||tp==='ANUAIS PÓS')){for(var k=0;k<Math.max(qt,1);k++)anosUsados.push(addMo(d0,12*k).getFullYear())}
-  else if(d0&&(tp==='ÚNICA'||tp==='ÚNICA PÓS'))anosUsados.push(d0.getFullYear());
+  if(d0&&(tp==='ANUAIS'||tp==='ANUAIS PÓS')){for(var k=0;k<Math.max(qt,1);k++)(tp==='ANUAIS'?anosUsadosPre:anosUsadosPos).push(addMo(d0,12*k).getFullYear())}
+  else if(d0&&(tp==='ÚNICA'||tp==='ÚNICA PÓS'))(tp==='ÚNICA'?anosUsadosPre:anosUsadosPos).push(d0.getFullYear());
  });
  var rem=r2(venda-soma),lim=renda>RULES.compCorte?RULES.compAcima:RULES.compAbaixo,pmax=r2(renda*lim/100);
  var tvenda=g('tvenda').value,sbpe=g('sbpe').checked,fgtsFlag=fgtsOn(),dep=depOn();
  var f=finLookup(renda),sub=sbpe?0:(f?(dep?f.subC:f.subS):0),maxFin=f?f.maxCom:0,parcela=f?f.parcela:0;
  var pr=posRule(g('tipologia').value);
- var c={venda:venda,soma:soma,rem:rem,curAto:curAto,curMensal:curMensal,curPos:curPos,hasSub:hasSub,hasFin:hasFin,hasFgts:hasFgts,fgtsFlag:fgtsFlag,pmax:pmax,entMo:entMo,entDate:ent,sub:sub,maxFin:maxFin,pr:pr,tvenda:tvenda,renda:renda,temPre:temPre,anosUsados:anosUsados};
+ var c={venda:venda,soma:soma,rem:rem,curAto:curAto,curMensal:curMensal,curPos:curPos,hasSub:hasSub,hasFin:hasFin,hasFgts:hasFgts,fgtsFlag:fgtsFlag,pmax:pmax,entMo:entMo,entDate:ent,sub:sub,maxFin:maxFin,pr:pr,tvenda:tvenda,renda:renda,temPre:temPre,anosUsadosPre:anosUsadosPre,anosUsadosPos:anosUsadosPos};
  var A=allocFlow(c,true),B=null;
  if(fgtsFlag&&!hasFgts&&rem>0.005&&tvenda==='CEF')B=allocFlow(c,false);
  return{venda:venda,soma:soma,rem:rem,ent:ent,sug:A.sug,sugAlt:B&&B.sug,alertEntrada:A.alertEntrada,leftover:A.leftover,temPre:temPre,fin:f,sub:sub,dep:dep,maxFin:maxFin,parcela:parcela,tvenda:tvenda,renda:renda}}
@@ -1366,13 +1377,16 @@ function abrirProposta(i){
    se a diferença for maior que isso é um problema real do fluxo, não arredondamento —
    mostra alerta em vez de mascarar. */
 function montarExportHTML(propNum){
+ /* relatório é todo em R$ — valores impressos sem o prefixo pra ganhar espaço */
+ function nb(n){return brl(n).replace(/^R\$\s?/,'')}
+ function sv(s){return String(s==null?'':s).replace(/^R\$\s?/,'')}
  var emp=esc(g('empreend').value||'—'),unid=esc(g('unidade').value||'—');
  var cadeia=[['Corretor(a)','cv_corretor'],['Gerente','cv_gerente'],['Superintendente','cv_super'],['Diretor(a)','cv_diretor']]
   .map(function(c){var v=g(c[1]).value.trim();return v?'<b>'+c[0]+':</b> '+esc(v):''}).filter(Boolean).join(' &nbsp;·&nbsp; ');
  var buyersRows=Array.prototype.map.call(document.querySelectorAll('.buyer'),function(b){
   var nome=esc(b.querySelector('.bnome').value||'—'),cpf=esc(b.querySelector('.bcpf').value||'—'),
       prof=esc(b.querySelector('.bprof').value||'—'),
-      renda=brl(cur(b.querySelector('.brenda').value)+cur(b.querySelector('.brendainf').value));
+      renda=nb(cur(b.querySelector('.brenda').value)+cur(b.querySelector('.brendainf').value));
   var quals=[['Fator social','.bfsocial'],['SPC','.bspc'],['SICAQ','.bsicaq'],['1º imóvel','.bpimovel'],['FGTS','.bfgts']]
    .map(function(q){var v=b.querySelector(q[1]).value;return v?q[0]+': '+esc(v):''}).filter(Boolean).join(' · ');
   var qrow=quals?'<tr><td colspan="4" style="font-size:9.5px;color:#777;padding-top:0;border-bottom:1px solid #eee">'+quals+'</td></tr>':'';
@@ -1383,8 +1397,8 @@ function montarExportHTML(propNum){
      mObra=0,mPos=0,entradaTot=0;
  var fluxRowsArr=Array.prototype.map.call(prows,function(r,i){
   var tipoV=r.querySelector('.ptipo').value,tipo=esc(tipoV==='ATO'?'ENTRADA':tipoV),qt=r.querySelector('.pqtd').value||'1',
-      val=r.querySelector('.pvalor').value||'—',dataV=r.querySelector('.pdata').value,
-      dataLab=dataV?dlab(parseISO(dataV)):'—',totNum=cur(r.querySelector('.ptotal').textContent),
+      val=sv(r.querySelector('.pvalor').value)||'—',dataV=r.querySelector('.pdata').value,
+      dataLab=dataV?dfull(parseISO(dataV)):'—',totNum=cur(r.querySelector('.ptotal').textContent),
       vlNum=cur(r.querySelector('.pvalor').value);
   somaCalc=r2(somaCalc+totNum);
   if(tipoV==='SUBSÍDIO')subsidioVal+=totNum;
@@ -1394,23 +1408,22 @@ function montarExportHTML(propNum){
   var isPos=PSPOS.indexOf(tipoV)>=0,isPre=PSPRE.indexOf(tipoV)>=0||GARSET.indexOf(tipoV)>=0;
   var rowCls=isPos?' class="pv-row-pos"':(isPre?' class="pv-row-pre"':'');
   var tag=isPos?'<span class="pv-tag pos">PÓS</span>':(isPre?'<span class="pv-tag pre">PRÉ</span>':'');
-  return{i:i,tot:totNum,html:'<tr'+rowCls+'><td>'+tag+tipo+'</td><td>'+qt+'</td><td>'+esc(val)+'</td><td>'+dataLab+'</td><td style="text-align:right;font-weight:800" data-tot="'+i+'">'+brl(totNum)+'</td></tr>'}});
+  return{i:i,tot:totNum,html:'<tr'+rowCls+'><td>'+tag+tipo+'</td><td>'+qt+'</td><td>'+esc(val)+'</td><td>'+dataLab+'</td><td style="text-align:right;font-weight:800" data-tot="'+i+'">'+nb(totNum)+'</td></tr>'}});
 
  var vendaNum=cur(g('venda').value),diff=r2(vendaNum-somaCalc),ajusteNota='';
  if(n>0&&diff!==0&&Math.abs(diff)<=1){
   var last=fluxRowsArr[n-1];last.tot=r2(last.tot+diff);
-  last.html=last.html.replace(/data-tot="\d+">[^<]*</,'data-tot="'+last.i+'">'+esc(brl(last.tot))+'<');
+  last.html=last.html.replace(/data-tot="\d+">[^<]*</,'data-tot="'+last.i+'">'+esc(nb(last.tot))+'<');
   somaCalc=vendaNum;
-  ajusteNota='<div class="pv-note">* diferença de '+brl(diff)+' entre a soma do fluxo e o valor de venda (arredondamento de centavos) ajustada na última parcela para fechamento exato.</div>'
+  ajusteNota='<div class="pv-note">* diferença de '+nb(diff)+' entre a soma do fluxo e o valor de venda (arredondamento de centavos) ajustada na última parcela para fechamento exato.</div>'
  }
  var fluxRows=fluxRowsArr.map(function(x){return x.html}).join('');
  var somaDivergente=Math.abs(r2(vendaNum-somaCalc))>1;
 
- var pendRows=Array.prototype.filter.call(document.querySelectorAll('#chk-card .vrow'),function(r){
+ /* pendências: linhas compactas dentro do setor Resumo */
+ var pendHTML=Array.prototype.filter.call(document.querySelectorAll('#chk-card .vrow'),function(r){
    return r.querySelector('.tick').textContent==='!'
-  }).map(function(r){return '<tr class="pv-pend"><td class="tickcol">!</td><td>'+esc(r.querySelector('.lab').textContent)+'</td></tr>'}).join('');
- var pendHTML=pendRows?('<div class="pv-h2">⚠ Pendências</div>'
-  +'<table class="pv-table"><thead><tr><th style="width:24px">!</th><th>Item</th></tr></thead><tbody>'+pendRows+'</tbody></table>'):'';
+  }).map(function(r){return '<div class="pv-pendline">! '+esc(r.querySelector('.lab').textContent.replace(/R\$\s?/g,''))+'</div>'}).join('');
 
  var venda=cur(g('venda').value),psPos=0;
  document.querySelectorAll('#flux .prow').forEach(function(r){
@@ -1418,75 +1431,69 @@ function montarExportHTML(propNum){
  var pctPosV=venda?psPos/venda*100:0;
 
  var tvenda=g('tvenda').value,sbpe=g('sbpe').checked;
- var finLab=tvenda!=='CEF'?('N/A — venda '+esc(tvenda)):(sbpe?'SBPE (já possui imóvel financiado — sem subsídio)':'MCMV (com subsídio, se aplicável)');
+ var tvLab=tvenda==='DIRETO'?'DIRETA':tvenda;
+ var finLab=tvenda!=='CEF'?'—':(sbpe?'SBPE':'MCMV');
 
+ /* fiador: linha compacta sob os proponentes (preenchimento opcional) */
  var temFiador=g('fiador').checked,fiadorHTML='';
  if(temFiador){
-  var fs=fiadoresData();
-  fiadorHTML='<div class="pv-h2">Fiador — '+esc(g('fiador_tipo').value)+'</div>'
-   +'<table class="pv-table"><thead><tr><th>Nome</th><th>CPF</th><th>Parentesco</th><th>Renda</th></tr></thead><tbody>'
-   +fs.map(function(f){return '<tr><td>'+esc(f.nome||'—')+'</td><td>'+esc(f.cpf||'—')+'</td><td>'+esc(f.grau||'—')+'</td><td>'+(f.renda?brl(f.renda):'—')+'</td></tr>'}).join('')
-   +'</tbody></table>'}
+  var fs=fiadoresData().filter(function(f){return f.nome||f.cpf||f.renda||f.grau});
+  fiadorHTML='<div class="pv-note" style="font-style:normal;font-size:9.5px;color:#555;margin-top:4px"><b>Fiador ('+esc(g('fiador_tipo').value)+')</b>'
+   +(fs.length?': '+fs.map(function(f){return esc(f.nome||'—')+(f.grau?' ('+esc(f.grau)+')':'')+(f.cpf?' · '+esc(f.cpf):'')+(f.renda?' · renda '+nb(f.renda):'')}).join(' &nbsp;|&nbsp; '):'')
+   +'</div>'}
  var parc=g('parc').checked;
- var parcHTML=parc?('<div class="pv-h2">Parceria</div>'
-  +'<div class="pv-grid"><div class="pv-box"><div class="k">Imobiliária parceira</div><div class="v" style="font-size:12px">'+esc(g('parcnome').value||'—')+'</div></div>'
-  +'<div class="pv-box"><div class="k">% parceria</div><div class="v">'+esc(g('c_pa').value||'0')+'%</div></div>'
-  +'<div class="pv-box"><div class="k">Valor da comissão</div><div class="v">'+esc(g('comval').value||'—')+'</div></div></div>'):'';
+ var parcHTML=parc?('<div class="pv-note" style="font-style:normal;font-size:9.5px;color:#555;margin-top:4px"><b>Parceria</b>: '+esc(g('parcnome').value||'—')+' · '+esc(g('c_pa').value||'0')+'% · comissão '+esc(sv(g('comval').value)||'—')+'</div>'):'';
 
  var ok=g('status').classList.contains('ok');
  var hoje=TODAY.toLocaleDateString('pt-BR');
  return '<div class="pv-page">'
- +'<div class="pv-head"><div style="display:flex;align-items:center;gap:10px">'
+ +'<div class="pv-head" style="align-items:center"><div style="flex:1;display:flex;align-items:center">'
  +'<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9Ijg2IiB2aWV3Qm94PSIwIDAgNTAwIDg2IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KPHBhdGggZD0iTTE1LjUgNTIuMDgwNkwyMC43NzcxIDgwLjI5MDFMNDMuMjM5MyA4NS40MjkxTDM3Ljk4OSA1Mi4yMDFMMTUuNSA1Mi4wODA2Wk05Ni4xMzE5IDUwLjU1MTNMNjQuMzU2MyAwLjE2NTQ5NkwzMy40NDYzIDBMNjUuNDE2NyA1MC4zODY4TDk2LjEzMTkgNTAuNTUxM1pNMCA1MC4wMzc2TDMyLjA0NDEgNTAuMjA4OEw0Ny42Nzg5IDI1Ljk5NDdMMzEuNzQyMSAwLjg3Nzg0NUwwIDUwLjAzNzZaTTU1LjU3MzkgODUuNDk0OEw3OC4wODk3IDgwLjU5NjZMODMuNjY3OSA1Mi40NDUyTDYxLjE3ODkgNTIuMzI0OEw1NS41NzM5IDg1LjQ5NDhaIiBmaWxsPSIjRUMxQzI0Ii8+DQo8cGF0aCBkPSJNMjY2LjMxOSAxNy45MDI3TDI2NS41MTQgMTMuODM0NEwyNTMuMTA0IDEzLjc2ODJMMjUyLjkwNiA1MC45NDUxTDI2Ni43NDQgNTEuMDE5TDI2Ni44NDcgMzEuNjc4MUMyNjYuODczIDI2Ljc4NjIgMjY5LjgxNyAyNC42OTU3IDI3My4yNzcgMjQuNzE0NEMyNzUuNjA5IDI0LjcyNjkgMjc3LjI2MSAyNS4xODY0IDI3OS41MDcgMjcuMDA0OUwyODUuMTI2IDE3LjAyNTNDMjgyLjczMyAxNC40NTQyIDI3OS4xMzIgMTMuMDA1IDI3NS4zNyAxMi45ODQ5QzI3MS43NjEgMTIuOTY1MiAyNjguMjkzIDE0LjQ1MTMgMjY2LjMxOSAxNy45MDI3Wk0xOTQuOTA0IDEyLjU1NDZDMTg0LjgyNiAxMi41MDA4IDE3NC4xODkgMTguNDYzOSAxNzQuMTE3IDMyLjAxMDZDMTc0LjA0NCA0NS41NTYyIDE4My45NDEgNTEuNDA1MiAxOTUuNjczIDUxLjQ2NzVDMjAyLjA2NiA1MS41MDE2IDIwOC4xNjkgNDkuNTAyMiAyMTIuNjI4IDQ1LjM4NjlMMjA1LjkgMzcuNzQ5N0MyMDMuNDg0IDM5LjU0MTggMjAwLjM5NCA0MC43MzA1IDE5Ni4zMzMgNDAuNzA4NEMxOTMuMzI0IDQwLjY5MjEgMTg5LjA0NSAzOS4yMzkxIDE4OC4wODUgMzUuOTIzNUwyMTQuMDMxIDM2LjA2MjFDMjE3LjI2OSAyMS40MDM1IDIwOC4wNjUgMTIuNjI0NiAxOTQuOTA0IDEyLjU1NDZaTTE4OC4yMDggMjcuMDQyOEMxODkuMTQzIDIwLjk1MjEgMjAxLjMyNSAyMS4yNDM4IDIwMS42NyAyNy4xMTQ4TDE4OC4yMDggMjcuMDQyOFpNMzk5LjEzMSAxOC41MzczQzM5Ny4xOTIgMTUuNTE2NyAzOTMuNTE1IDEzLjY5MSAzODguMjUyIDEzLjY2MjdDMzc3LjQyMSAxMy42MDQ2IDM3MC4xNTYgMjEuOTk1NSAzNzAuMDk3IDMyLjk4MjlDMzcwLjAzOSA0My44MjA3IDM3Ni4wODkgNTEuNjAzOCAzODYuOTkyIDUyLjMzOTZDMzkxLjEyNyA1Mi41ODcxIDM5Ni4wOTcgNTEuMzM0NiAzOTkuMjc1IDQ3LjczOThMMzk5Ljg1NSA1MS43MzA5TDQxMi42NDEgNTEuNzk5NUw0MTIuODM5IDE0LjYyMjVMMzk5LjgyOCAxNC41NTNMMzk5LjEzMSAxOC41MzczWk0zOTEuMjYyIDQxLjIyMzZDMzg3LjEyNSA0MS4yMDE1IDM4My44MzMgMzguMjQ5NSAzODMuODYgMzMuMDU2M0MzODMuODg4IDI3Ljg2MzYgMzg3LjIxMyAyNC44NzEyIDM5MS4zNDkgMjQuODkzM0MzOTYuMjM4IDI0LjkxOTcgMzk5LjAwNCAyOC4xNjk2IDM5OC45NzcgMzMuMTM3NEMzOTguOTU0IDM3LjUwMjEgMzk1LjkyNiA0MS4yNDg2IDM5MS4yNjIgNDEuMjIzNlpNMTU0LjM3MSAxMi40MTIxQzE0OS4yNTcgMTIuMzg0OCAxNDUuMTEyIDEzLjg2OCAxNDIuMDA4IDE3LjY4OTdDMTQwLjE0NiAxNC4yMTc3IDEzNi41NDYgMTIuNDY3NyAxMzIuNzg1IDEyLjM3MThDMTI4Ljk1MSAxMi4yNzU5IDEyNC44OCAxMy44MzU0IDEyMi41MzIgMTcuMDU4TDEyMS41NzYgMTMuMDY0NUwxMDkuOTE4IDEzLjAwMjFMMTA5LjcyIDUwLjE3OTFMMTIzLjQ4MyA1MC4yNTI1TDEyMy41OTIgMjkuODU3N0MxMjMuNjg5IDI1Ljc5NDcgMTI2LjE4IDIzLjkyNzIgMTI4LjUxMiAyMy45Mzk3QzEzMC45OTMgMjMuOTUzMSAxMzIuNDE1IDI1LjM4OTMgMTMyLjM5MiAyOS42Nzk3TDEzMi4yODIgNTAuMjk5OUwxNDUuODk1IDUwLjM3MjlMMTQ2LjAwNCAyOS45MDM3QzE0Ni4wMjUgMjUuODM4OCAxNDguNTE2IDI0LjI3MjEgMTUwLjg0NyAyNC4yODQ2QzE1Mi44NzggMjQuMjk1NiAxNTQuNjc1IDI1Ljg4NDggMTU0LjY1MyAyOS43OTg3TDE1NC41NDMgNTAuNDE4OUwxNjguMzgxIDUwLjQ5MjhMMTY4LjQ5MiAyOS43OTczQzE2OC41NTggMTcuNDU1NiAxNjIuNDE4IDEyLjQ1NTMgMTU0LjM3MSAxMi40MTIxWk0yNDEuMTU3IDQwLjM0NjdDMjM5LjA1MSA0MC4zMzU3IDIzNy41NTMgMzkuMzQ4IDIzNy40OTIgMzYuNzE0TDIzNy41NTcgMjQuNTIzTDI0NS45OCAyNC41NjgxTDI0Ni4wMzcgMTMuOTU1OEwyMzcuNjkgMTMuOTExMUwyMzcuNzQ3IDMuMTUwMTJMMjIzLjk3NiA0LjU4MTA2TDIyMy45MjYgMTMuODM3M0wyMTcuOTg0IDEzLjgwNTZMMjE3LjkyOCAyNC40MTc5TDIyMy44NyAyNC40NDk2TDIyMy44MDUgMzYuNjQwNkMyMjMuNTE2IDQ4LjMwMzkgMjMwLjExNyA1MS43MjU2IDIzNy40ODcgNTEuNzY0OUMyNDEuMzIyIDUxLjc4NTYgMjQ1LjAxMiA1MS4xMjc5IDI0OC4xNzkgNDkuMzM5NkwyNDUuMjI1IDM5LjA4OEMyNDQuMDk0IDM5LjgzNDkgMjQyLjUxMSA0MC4zNTM5IDI0MS4xNTcgNDAuMzQ2N1pNMzUzLjUxMiA0MC43MjA5QzM0OC4yNDggNDAuNjkyNiAzNDUuNDg0IDM3LjA2NjEgMzQ1LjUwNiAzMy4wMDI2QzM0NS41MzEgMjguMzM2MSAzNDguNDA5IDI0LjUxMjkgMzUzLjY3MyAyNC41NDEyQzM1Ni4xNTYgMjQuNTU0NyAzNTguMjU3IDI1LjM5NDEgMzYwLjA1MSAyNy4yODQ2TDM2Ny40NjUgMTkuMzQ4QzM2My41NzUgMTUuNDEzMSAzNTguMjQ1IDEzLjUwMjkgMzUyLjkwNiAxMy40NzQxQzM0Mi40NTEgMTMuNDE4IDMzMi4wNDEgMTkuMzA4MiAzMzEuOTY4IDMyLjg1NDhDMzMxLjg5NCA0Ni43NzY2IDM0Mi4wOTMgNTIuMTc1MSAzNTIuOTI0IDUyLjIzMzFDMzU4LjQ5IDUyLjI2MjkgMzYzLjg0MSA0OS45NTg5IDM2OC4zIDQ1Ljk5MzJMMzYwLjQ0OCAzNy42NzI5QzM1OC41NTcgMzkuNjk0MyAzNTYuMDY5IDQwLjczNDMgMzUzLjUxMiA0MC43MjA5Wk00ODYuOTg5IDE1LjAxOTJMNDg2LjI5MSAxOS4wMDM2QzQ4NC4zNTIgMTUuOTgzIDQ4MC42NzYgMTQuMTU3MiA0NzUuNDEyIDE0LjEyODlDNDY0LjU4MSAxNC4wNzA5IDQ1Ny4zMTcgMjIuNDYxNyA0NTcuMjU4IDMzLjQ0OTJDNDU3LjIgNDQuMjg3IDQ2My4yNSA1Mi4wNyA0NzQuMTUyIDUyLjgwNTlDNDc4LjI4OCA1My4wNTM0IDQ4My4yNTcgNTEuODAwOSA0ODYuNDM2IDQ4LjIwNjFMNDg3LjAxNiA1Mi4xOTcxTDQ5OS44MDEgNTIuMjY1N0w1MDAgMTUuMDg4OEw0ODYuOTg5IDE1LjAxOTJaTTQ3OC40MjMgNDEuNjg5OUM0NzQuMjg2IDQxLjY2NzggNDcwLjk5MyAzOC43MTU4IDQ3MS4wMjEgMzMuNTIzQzQ3MS4wNDkgMjguMzMwMyA0NzQuMzczIDI1LjMzOCA0NzguNTEgMjUuMzYwMUM0ODMuMzk5IDI1LjM4NiA0ODYuMTY0IDI4LjYzNjQgNDg2LjEzOCAzMy42MDQxQzQ4Ni4xMTUgMzcuOTY3OSA0ODMuMDg3IDQxLjcxNDggNDc4LjQyMyA0MS42ODk5Wk00MzYuNDU3IDI3Ljk5NUM0MzQuMiAyNy45MDcyIDQzMy42OCAyNi44NTEgNDMzLjY4MyAyNi4xNzM2QzQzMy42OTEgMjQuODE5IDQzNS4wNDcgMjQuMzc0MyA0MzcuMDAyIDI0LjM4NDhDNDQwLjAxMSAyNC4zMjU0IDQ0NC4yOTIgMjUuNDAyMyA0NDYuMzE2IDI2LjY5MzFMNDUyLjIyNiAxOC40NDYyQzQ0OC42MzEgMTUuNzE2NyA0NDMuMDc1IDEzLjg4MTQgNDM3LjA1OCAxMy44NDkzQzQyOC4zMzQgMTMuODAyNyA0MTkuODkzIDE2Ljk5MzIgNDE5Ljg0NSAyNS45NDg2QzQxOS43OTcgMzQuOTc5OSA0MjguNTA2IDM3Ljk2MDcgNDM1LjcyNSAzOC4yMjZDNDM4LjQzMSAzOC40NjU4IDQzOS42MyAzOS4wNzQxIDQzOS42MjQgNDAuMjc4NkM0MzkuNjE4IDQxLjQ4MjIgNDM4LjMzNiA0Mi4wNzg0IDQzNS44NTQgNDIuMDY1QzQzMi44NDcgNDEuODk4MSA0MjguMzM2IDQxLjU3MjggNDIyLjcxNiAzNy44NTU3TDQxOC4xNDkgNDcuOTE1NEM0MjIuMzQ1IDUxLjAyMzMgNDI5LjYyOSA1Mi44Njg3IDQzNi4wOTggNTIuOTAzM0M0NDUuMDQ4IDUyLjk1MTIgNDUzLjQxNCA0OS41MzM5IDQ1My40NjIgNDAuMzUzQzQ1My41MTYgMzAuNDk0MiA0NDQuMjAyIDI4LjI2MTcgNDM2LjQ1NyAyNy45OTVaTTMwNi44MDUgMTMuMjI3MUMyOTYuMDUxIDEzLjE2OTUgMjg1LjU2NiAxOC44MzM4IDI4NS40OTIgMzIuNjA1OUMyODUuNDIgNDYuMTUxNSAyOTUuOTE3IDUyLjA3NzcgMzA2LjU5NyA1Mi4xMzQ4QzMxNy4wNTEgNTIuMTkwOSAzMjcuODM3IDQ2LjM3OCAzMjcuOTEgMzIuODMyOEMzMjcuOTgzIDE5LjI4NjEgMzE3Ljc4NSAxMy4yODYxIDMwNi44MDUgMTMuMjI3MVpNMzA2LjY1NyA0MC43NzEzQzMwMS43NyA0MC43NDU0IDI5OS4wMDcgMzYuOTY3MyAyOTkuMDMgMzIuNjc4M0MyOTkuMDUzIDI4LjM4ODQgMzAxLjg1NiAyNC41NjQ3IDMwNi43NDQgMjQuNTkxMUMzMTEuNjMzIDI0LjYxNyAzMTQuMzk1IDI4LjQ3MDQgMzE0LjM3MiAzMi43NjAzQzMxNC4zNDggMzcuMjc2MiAzMTEuMzIxIDQwLjc5NjIgMzA2LjY1NyA0MC43NzEzWiIgZmlsbD0iI0VDMUMyNCIvPg0KPHBhdGggZD0iTTIzMi42NDkgNzIuMTg1NkMyMzEuODQ1IDcyLjE1NDQgMjMxLjY1OSA3MS43Nzc5IDIzMS42NjEgNzEuNTM2MUMyMzEuNjYzIDcxLjA1MzUgMjMyLjE0NyA3MC44OTUyIDIzMi44NDMgNzAuODk5MUMyMzMuOTE2IDcwLjg3ODQgMjM1LjQ0MiA3MS4yNjIyIDIzNi4xNjMgNzEuNzIxM0wyMzguMjY5IDY4Ljc4MjdDMjM2Ljk4OCA2Ny44MDk4IDIzNS4wMDggNjcuMTU2IDIzMi44NjMgNjcuMTQ0NUMyMjkuNzU0IDY3LjEyNzcgMjI2Ljc0NiA2OC4yNjQ2IDIyNi43MjkgNzEuNDU2NUMyMjYuNzEyIDc0LjY3NTIgMjI5LjgxNiA3NS43Mzc4IDIzMi4zODggNzUuODMxM0MyMzMuMzUzIDc1LjkxNjcgMjMzLjc4IDc2LjEzNCAyMzMuNzc3IDc2LjU2MjRDMjMzLjc3NSA3Ni45OTE3IDIzMy4zMTggNzcuMjA0MiAyMzIuNDM0IDc3LjE5OTRDMjMxLjM2MiA3Ny4xMzk5IDIyOS43NTQgNzcuMDIzOCAyMjcuNzUxIDc1LjY5ODlMMjI2LjEyNCA3OS4yODQyQzIyNy42MTkgODAuMzkxMyAyMzAuMjE1IDgxLjA0ODUgMjMyLjUyIDgxLjA2MUMyMzUuNzEgODEuMDc4MiAyMzguNjkxIDc5Ljg2MDggMjM4LjcwOSA3Ni41ODgzQzIzOC43MjggNzMuMDc1OSAyMzUuNDA5IDcyLjI4MDEgMjMyLjY0OSA3Mi4xODU2Wk0xOTUuOTEgNjYuOTQ2OUMxOTQuNTE2IDY2LjkxMjMgMTkyLjg1MiA2Ny4zODU4IDE5MS43MTkgNjguNjkzOUwxOTEuNTEzIDY3LjI0NDhMMTg3LjE0NCA2Ny4yMjEyTDE4Ny4wNzMgODAuNDdMMTkxLjk1MSA4MC40OTU5TDE5MS45ODggNzMuNTIzQzE5MS45OTcgNzEuNzc5OCAxOTMuMSA3MC45ODA2IDE5NC4yOCA3MC45ODczQzE5NS4xOTEgNzAuOTkyMSAxOTYuMTI2IDcxLjU2MDYgMTk2LjExOCA3My4xOTYzTDE5Ni4wNzggODAuNTE4NEwyMDEuMDEgODAuNTQ0OEwyMDEuMDQ5IDczLjE5NjhDMjAxLjA3NCA2OC40NzU3IDE5OC42OTcgNjYuOTg4NiAxOTUuOTEgNjYuOTQ2OVpNMTU0LjEwNSA2Ni43NTAyQzE1MC4yNzIgNjYuNzI5NiAxNDYuNTM2IDY4Ljc0NzYgMTQ2LjUxIDczLjY1NTRDMTQ2LjQ4NCA3OC40ODI2IDE1MC4yMjUgODAuNTk1MiAxNTQuMDMxIDgwLjYxNTNDMTU3Ljc1NyA4MC42MzU1IDE2MS42IDc4LjU2MzIgMTYxLjYyNiA3My43MzZDMTYxLjY1MiA2OC45MDg4IDE1OC4wMTggNjYuNzcwOCAxNTQuMTA1IDY2Ljc1MDJaTTE1NC4wNTIgNzYuNTY1MkMxNTIuMzEgNzYuNTU2MSAxNTEuMzI2IDc1LjIwOTYgMTUxLjMzNCA3My42ODEzQzE1MS4zNDIgNzIuMTUzIDE1Mi4zNDEgNzAuNzkwMiAxNTQuMDgzIDcwLjc5OTNDMTU1LjgyNSA3MC44MDg0IDE1Ni44MDkgNzIuMTgxOCAxNTYuODAxIDczLjcxMDFDMTU2Ljc5MyA3NS4zMiAxNTUuNzE0IDc2LjU3NDQgMTU0LjA1MiA3Ni41NjUyWk0xMTcuMjg2IDc2LjI2MTZDMTE1LjQxIDc2LjI1MTUgMTE0LjQyNiA3NC45NTkyIDExNC40MzMgNzMuNTExQzExNC40NDMgNzEuODQ3OSAxMTUuNDY4IDcwLjQ4NjEgMTE3LjM0NCA3MC40OTYxQzExOC4yMjkgNzAuNTAwOSAxMTguOTc4IDcwLjc5OTMgMTE5LjYxNyA3MS40NzMzTDEyMi4yNTkgNjguNjQ1QzEyMC44NzMgNjcuMjQzMyAxMTguOTczIDY2LjU2MjYgMTE3LjA3MSA2Ni41NTI1QzExMy4zNDUgNjYuNTMyNCAxMDkuNjM1IDY4LjYzMTYgMTA5LjYwOSA3My40NTg3QzEwOS41ODMgNzguNDE5OCAxMTMuMjE4IDgwLjM0MzggMTE3LjA3NyA4MC4zNjQ0QzExOS4wNjEgODAuMzc1IDEyMC45NjggNzkuNTUzOCAxMjIuNTU3IDc4LjE0MUwxMTkuNzU4IDc1LjE3NTZDMTE5LjA4NCA3NS44OTYxIDExOC4xOTggNzYuMjY2NCAxMTcuMjg2IDc2LjI2MTZaTTI3MS40NTMgNzcuMTY2M0MyNzAuNzAzIDc3LjE2MjUgMjcwLjE2OSA3Ni44MTA5IDI3MC4xNDYgNzUuODcyMUwyNzAuMTY5IDcxLjUyNzVMMjczLjE3MSA3MS41NDMzTDI3My4xOTIgNjcuNzYyM0wyNzAuMjE2IDY3Ljc0NjVMMjcwLjIzNyA2My45MTEzTDI2NS4zMjkgNjQuNDIxN0wyNjUuMzExIDY3LjcyMDZMMjYzLjE5NCA2Ny43MDkxTDI2My4xNzQgNzEuNDkwMUwyNjUuMjkxIDcxLjUwMTZMMjY1LjI2OCA3NS44NDYyQzI2NS4xNjYgODAuMDAzMiAyNjcuNTE4IDgxLjIyMjYgMjcwLjE0NSA4MS4yMzY1QzI3MS41MTEgODEuMjQzNyAyNzIuODI2IDgxLjAwODcgMjczLjk1NSA4MC4zNzEyTDI3Mi45MDIgNzYuNzE4M0MyNzIuNDk5IDc2Ljk4NDUgMjcxLjkzNiA3Ny4xNjg3IDI3MS40NTMgNzcuMTY2M1pNNDk1LjA3NiA2OC44NjhMNDk0LjgyNyA3MC4yODg5QzQ5NC4xMzcgNjkuMjEyNSA0OTIuODI3IDY4LjU2MTUgNDkwLjk1MSA2OC41NTE5QzQ4Ny4wOTEgNjguNTMxMyA0ODQuNTAyIDcxLjUyMTIgNDg0LjQ4MSA3NS40MzY1QzQ4NC40NjEgNzkuMjk4NiA0ODYuNjE3IDgyLjA3MjYgNDkwLjUwMiA4Mi4zMzQ2QzQ5MS45NzUgODIuNDIzMyA0OTMuNzQ2IDgxLjk3NjcgNDk0Ljg3OSA4MC42OTU0TDQ5NS4wODYgODIuMTE3N0w0OTkuNjQyIDgyLjE0MjJMNDk5LjcxMyA2OC44OTM1TDQ5NS4wNzYgNjguODY4Wk00OTIuMDI0IDc4LjM3MjdDNDkwLjU1IDc4LjM2NTEgNDg5LjM3NiA3Ny4zMTI2IDQ4OS4zODYgNzUuNDYxOUM0ODkuMzk2IDczLjYxMTMgNDkwLjU4MSA3Mi41NDQ5IDQ5Mi4wNTUgNzIuNTUyNkM0OTMuNzk3IDcyLjU2MTcgNDk0Ljc4MyA3My43MjExIDQ5NC43NzQgNzUuNDkwN0M0OTQuNzY2IDc3LjA0NjQgNDkzLjY4NiA3OC4zODE0IDQ5Mi4wMjQgNzguMzcyN1pNNDU0LjMzNiA3MC4wOTg1TDQ1NC4wNDkgNjguNjQ4OEw0NDkuNjI3IDY4LjYyNTNMNDQ5LjU1NiA4MS44NzRMNDU0LjQ4NyA4MS45MDA0TDQ1NC41MjQgNzUuMDA3N0M0NTQuNTM0IDczLjI2NDUgNDU1LjU4MyA3Mi41MTkgNDU2LjgxNSA3Mi41MjU3QzQ1Ny42NDcgNzIuNTMgNDU4LjIzNiA3Mi42OTQ2IDQ1OS4wMzYgNzMuMzQyMkw0NjEuMDM4IDY5Ljc4NTdDNDYwLjE4NiA2OC44Njk1IDQ1OC45MDIgNjguMzUyOCA0NTcuNTYyIDY4LjM0NTdDNDU2LjI3NiA2OC4zMzg5IDQ1NS4wMzkgNjguODY5IDQ1NC4zMzYgNzAuMDk4NVpNNDE2LjU4OCA2OC4xNTM4QzQxMi43NTUgNjguMTMzMSA0MDkuMDE5IDcwLjE1MTIgNDA4Ljk5MyA3NS4wNTlDNDA4Ljk2NyA3OS44ODYyIDQxMi43MDggODEuOTk4OCA0MTYuNTE0IDgyLjAxODlDNDIwLjI0IDgyLjAzOTEgNDI0LjA4MyA3OS45NjY4IDQyNC4xMDkgNzUuMTM5NkM0MjQuMTM1IDcwLjMxMjkgNDIwLjUwMSA2OC4xNzQ5IDQxNi41ODggNjguMTUzOFpNNDE2LjUzNSA3Ny45Njg4QzQxNC43OTMgNzcuOTU5NyA0MTMuODA5IDc2LjYxMzIgNDEzLjgxNyA3NS4wODQ5QzQxMy44MjUgNzMuNTU2NiA0MTQuODI0IDcyLjE5MzggNDE2LjU2NiA3Mi4yMDI5QzQxOC4zMDggNzIuMjEyIDQxOS4yOTMgNzMuNTg1NCA0MTkuMjg1IDc1LjExMzdDNDE5LjI3NyA3Ni43MjM1IDQxOC4xOTcgNzcuOTc4IDQxNi41MzUgNzcuOTY4OFpNMzgyLjI4OCA3Ny43NTg3QzM4MS41MzggNzcuNzU0OSAzODEuMDA0IDc3LjQwMzMgMzgwLjk4MiA3Ni40NjQ1TDM4MS4wMDUgNzIuMTE5OUwzODQuMDA2IDcyLjEzNTdMMzg0LjAyNiA2OC4zNTQ4TDM4MS4wNTIgNjguMzM4OUwzODEuMDcyIDY0LjUwMzhMMzc2LjE2NSA2NS4wMTQyTDM3Ni4xNDcgNjguMzEzTDM3NC4wMyA2OC4zMDE1TDM3NC4wMDkgNzIuMDgyNUwzNzYuMTI3IDcyLjA5NEwzNzYuMTA0IDc2LjQzODZDMzc2LjAwMiA4MC41OTU3IDM3OC4zNTQgODEuODE1IDM4MC45OCA4MS44MjlDMzgyLjM0NyA4MS44MzYyIDM4My42NjIgODEuNjAxMSAzODQuNzkxIDgwLjk2MzZMMzgzLjczOCA3Ny4zMTA3QzM4My4zMzQgNzcuNTc3NCAzODIuNzcxIDc3Ljc2MTYgMzgyLjI4OCA3Ny43NTg3Wk0zNDMuODQ2IDc1LjExMzJDMzQzLjgzNyA3Ni44NTY0IDM0Mi43MzQgNzcuNTc0NSAzNDEuNTU1IDc3LjU2ODNDMzQwLjY0NCA3Ny41NjM1IDMzOS43MDkgNzYuOTk1MSAzMzkuNzE3IDc1LjM1OTNMMzM5Ljc1NyA2OC4wMzcyTDMzNC44MjUgNjguMDEwOEwzMzQuNzg2IDc1LjM1OThDMzM0Ljc2IDgwLjA3OTUgMzM3LjEzOCA4MS41Njc1IDMzOS45MjUgODEuNjA5N0MzNDEuMzE4IDgxLjY0MzMgMzQyLjk4MyA4MS4xNjk5IDM0NC4xMTUgNzkuODYxN0wzNDQuMzIyIDgxLjMxMDlMMzQ4LjY5MSA4MS4zMzQ0TDM0OC43NjIgNjguMDg1N0wzNDMuODg0IDY4LjA1OThMMzQzLjg0NiA3NS4xMTMyWk0zMDMuNzMzIDY5LjI5MzFMMzAzLjQ0NiA2Ny44NDM0TDI5OS4wMjQgNjcuODE5OUwyOTguOTUzIDgxLjA2ODZMMzAzLjg4NCA4MS4wOTVMMzAzLjkyMSA3NC4yMDIzQzMwMy45MyA3Mi40NTkgMzA0Ljk4IDcxLjcxMzYgMzA2LjIxMyA3MS43MjAzQzMwNy4wNDQgNzEuNzI0NiAzMDcuNjMzIDcxLjg4OTIgMzA4LjQzNCA3Mi41MzY4TDMxMC40MzUgNjguOTgwM0MzMDkuNTgzIDY4LjA2NDEgMzA4LjI5OSA2Ny41NDc0IDMwNi45NTkgNjcuNTQwMkMzMDUuNjczIDY3LjUzMzUgMzA0LjQzNyA2OC4wNjM2IDMwMy43MzMgNjkuMjkzMVoiIGZpbGw9IiM1NzU3NTYiLz4NCjwvc3ZnPg0K" alt="Metrocasa" style="height:30px;width:auto"></div>'
- +'<div class="pv-meta"><div style="font-weight:800;font-size:13px;color:var(--ink)">Proposta '+(propNum?'Nº '+esc(propNum):'<span style="color:#B8740B">NÃO REGISTRADA</span>')+'</div><div>'+hoje+' · '+esc(tvenda)+'</div><div>por '+esc(window.USER_EMAIL||'—')+'</div></div></div>'
- /* faixa de decisão: o que o cliente precisa ver primeiro — valor, entrada, mensais, status */
- +'<div style="display:flex;gap:7px;margin-bottom:10px;font-family:-apple-system,sans-serif">'
- +'<div class="pv-box" style="flex:1.25;background:#1F1F22"><div class="k" style="color:#B9B6B0">Valor da proposta</div><div class="v" style="font-size:19px;color:#fff">'+esc(g('venda').value||'—')+'</div></div>'
- +'<div class="pv-box" style="flex:1"><div class="k">Entrada total</div><div class="v">'+(entradaTot?brl(entradaTot):'—')+'</div></div>'
- +'<div class="pv-box" style="flex:1"><div class="k">Mensal na obra</div><div class="v" style="color:#1B4C8C">'+(mObra?brl(mObra)+'/mês':'—')+'</div></div>'
- +'<div class="pv-box" style="flex:1"><div class="k">Mensal pós-chaves</div><div class="v" style="color:#9A5B0A">'+(mPos?brl(mPos)+'/mês':'—')+'</div></div>'
- +'<div class="pv-box" style="flex:none;display:flex;align-items:center;background:'+(ok?'#EAF7EF':'#FCF1DD')+'"><div style="font-weight:900;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:'+(ok?'#0F6E36':'#B8740B')+'">'+esc(g('status').textContent)+'</div></div>'
+ +'<div style="flex:1;text-align:center;font-family:-apple-system,sans-serif;font-weight:900;font-size:15px;color:var(--ink)">Proposta '+(propNum?'Nº '+esc(propNum):'<span style="color:#B8740B;font-size:11px">NÃO REGISTRADA</span>')+'</div>'
+ +'<div class="pv-meta" style="flex:1"><div style="font-weight:800;color:var(--ink)">'+hoje+' · '+esc(tvLab)+'</div><div>por '+esc(window.USER_EMAIL||'—')+'</div></div></div>'
+ +(cadeia?'<div style="font-family:-apple-system,sans-serif;font-size:10.5px;color:#555;background:#F7F5F2;border-radius:7px;padding:6px 10px;margin-bottom:8px"><span style="font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:#888;font-weight:800">Cadeia de venda</span><br>'+cadeia+'</div>':'')
+
+ /* setor 1 — empreendimento e unidade */
+ +'<div class="pv-h2">Empreendimento</div>'
+ +'<div class="pv-grid5">'
+ +'<div class="pv-box"><div class="k">Empreendimento</div><div class="v" style="font-size:11.5px">'+emp+'</div></div>'
+ +'<div class="pv-box"><div class="k">Unidade</div><div class="v" style="font-size:11.5px">'+unid+'</div></div>'
+ +'<div class="pv-box"><div class="k">Tipologia</div><div class="v" style="font-size:11.5px">'+esc(g('tipologia').value||'—')+'</div></div>'
+ +'<div class="pv-box"><div class="k">Categoria de uso</div><div class="v" style="font-size:11.5px">'+esc(g('categoria').value||'—')+'</div></div>'
+ +'<div class="pv-box"><div class="k">Data de entrega</div><div class="v" style="font-size:11.5px">'+(g('entrega').value?dfull(parseISO(g('entrega').value)):'—')+'</div></div>'
  +'</div>'
- +(cadeia?'<div style="font-family:-apple-system,sans-serif;font-size:10.5px;color:#555;background:#F7F5F2;border-radius:7px;padding:6px 10px;margin-bottom:10px"><span style="font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:#888;font-weight:800">Cadeia de venda</span><br>'+cadeia+'</div>':'')
- +'<div class="pv-grid">'
- +'<div class="pv-box"><div class="k">Empreendimento</div><div class="v">'+emp+'</div></div>'
- +'<div class="pv-box"><div class="k">Unidade</div><div class="v">'+unid+'</div></div>'
- +'<div class="pv-box"><div class="k">Valor de venda</div><div class="v">'+esc(g('venda').value)+'</div></div>'
+
+ /* setor 2 — resumo: valores, parâmetros e o que está fora */
+ +'<div class="pv-h2">Resumo</div>'
+ +'<div class="pv-grid4">'
+ +'<div class="pv-box"><div class="k">Valor de tabela</div><div class="v">'+esc(sv(g('tab').value)||'—')+'</div></div>'
+ +'<div class="pv-box"><div class="k">Desconto</div><div class="v">'+esc(g('desc').value||'0%')+'</div></div>'
+ +'<div class="pv-box" style="background:#1F1F22"><div class="k" style="color:#B9B6B0">Valor de venda (VGV)</div><div class="v" style="color:#fff">'+esc(sv(g('venda').value)||'—')+'</div></div>'
+ +'<div class="pv-box"><div class="k">Financiamento</div><div class="v">'+finLab+'</div></div>'
+ +'<div class="pv-box"><div class="k">Garantido</div><div class="v">'+esc(sv(g('gar').textContent))+' <span style="font-size:9px;color:#888">('+g('pctgar').textContent+')</span></div></div>'
+ +'<div class="pv-box"><div class="k" style="color:#1B4C8C">Pré-chaves</div><div class="v" style="color:#1B4C8C">'+esc(sv(g('pre').textContent))+' <span style="font-size:9px">('+g('pctpre').textContent+')</span></div></div>'
+ +'<div class="pv-box"><div class="k" style="color:#9A5B0A">Pós-chaves</div><div class="v" style="color:#9A5B0A">'+(psPos>0?nb(psPos):'—')+' <span style="font-size:9px">('+(venda?pctPosV.toFixed(1).replace('.',',')+'%':'—')+')</span></div></div>'
+ +'<div class="pv-box"><div class="k">Entrada total</div><div class="v">'+(entradaTot?nb(entradaTot):'—')+'</div></div>'
+ +'<div class="pv-box"><div class="k" style="color:#1B4C8C">Mensal na obra (pré-chaves)</div><div class="v" style="color:#1B4C8C">'+(mObra?nb(mObra)+'/mês':'—')+'</div></div>'
+ +'<div class="pv-box"><div class="k" style="color:#9A5B0A">Mensal pós-chaves</div><div class="v" style="color:#9A5B0A">'+(mPos?nb(mPos)+'/mês':'—')+'</div></div>'
+ +'<div class="pv-box"><div class="k">Soma do fluxo</div><div class="v">'+nb(somaCalc)+'</div></div>'
+ +'<div class="pv-box"><div class="k">Fiador</div><div class="v" style="font-size:11px">'+(temFiador?esc(g('fiador_tipo').value):'SEM FIADOR')+'</div></div>'
  +'</div>'
- +'<div class="pv-grid4" style="margin-top:8px">'
- +'<div class="pv-box"><div class="k">Categoria de uso</div><div class="v" style="font-size:12px">'+esc(g('categoria').value||'—')+'</div></div>'
- +'<div class="pv-box"><div class="k">Tipologia</div><div class="v" style="font-size:12px">'+esc(g('tipologia').value||'—')+'</div></div>'
- +'<div class="pv-box"><div class="k">Valor de tabela</div><div class="v" style="font-size:12px">'+esc(g('tab').value||'—')+'</div></div>'
- +'<div class="pv-box"><div class="k">Desconto</div><div class="v" style="font-size:12px">'+esc(g('desc').value||'0%')+'</div></div>'
- +'<div class="pv-box"><div class="k">Data de entrega</div><div class="v" style="font-size:12px">'+(g('entrega').value?dlab(parseISO(g('entrega').value)):'—')+'</div></div>'
- +'<div class="pv-box"><div class="k">Financiamento</div><div class="v" style="font-size:12px">'+finLab+'</div></div>'
- +'<div class="pv-box"><div class="k">Pré-chaves</div><div class="v" style="font-size:12px;color:#1B4C8C">'+g('pre').textContent+' ('+g('pctpre').textContent+')</div></div>'
- +'<div class="pv-box"><div class="k">Pós-chaves</div><div class="v" style="font-size:12px;color:#9A5B0A">'+(psPos>0?brl(psPos):'—')+' ('+(venda?pctPosV.toFixed(1).replace('.',',')+'%':'—')+')</div></div>'
- +'<div class="pv-box"><div class="k">Fiador</div><div class="v" style="font-size:12px">'+(temFiador?esc(g('fiador_tipo').value):'SEM FIADOR')+'</div></div>'
- +'</div>'
- +'<div class="pv-h2">Proponentes</div>'
- +'<table class="pv-table"><thead><tr><th>Nome</th><th>CPF</th><th>Profissão</th><th>Renda</th></tr></thead><tbody>'+(buyersRows||'<tr><td colspan="4">—</td></tr>')+'</tbody></table>'
- +fiadorHTML
- +'<div class="pv-h2">Condições de pagamento <span class="pv-tag pre" style="margin-left:6px">PRÉ</span> <span class="pv-tag pos">PÓS</span></div>'
- +'<table class="pv-table"><thead><tr><th>Tipo</th><th>Qtd</th><th>Valor</th><th>1ª data</th><th style="text-align:right">Total</th></tr></thead><tbody>'+(fluxRows||'<tr><td colspan="5">—</td></tr>')+'</tbody></table>'
- +ajusteNota
- +(somaDivergente?'<div class="pv-warn">⚠ A soma do fluxo ('+brl(somaCalc)+') não fecha com o valor de venda ('+brl(vendaNum)+') — diferença de '+brl(Math.abs(r2(vendaNum-somaCalc)))+'. Revise o fluxo antes de enviar.</div>':'')
+ +(somaDivergente?'<div class="pv-warn">⚠ A soma do fluxo ('+nb(somaCalc)+') não fecha com o valor de venda ('+nb(vendaNum)+') — diferença de '+nb(Math.abs(r2(vendaNum-somaCalc)))+'. Revise o fluxo antes de enviar.</div>':'')
  +pendHTML
  +parcHTML
- +'<div class="pv-h2">Resumo</div>'
- +'<div class="pv-grid">'
- +'<div class="pv-box"><div class="k">Soma do fluxo</div><div class="v">'+brl(somaCalc)+'</div></div>'
- +'<div class="pv-box"><div class="k">Garantido</div><div class="v">'+g('gar').textContent+'</div></div>'
- +'<div class="pv-box"><div class="k">Falta / excede</div><div class="v">'+(somaDivergente?g('falta').textContent:'R$ 0')+'</div></div>'
- +'</div>'
- +'<div class="pv-h2">Resumo de preferências</div>'
- +'<div class="pv-grid4">'
- +'<div class="pv-box"><div class="k">Renda total</div><div class="v" style="font-size:12px">'+g('rendatot').textContent+'</div></div>'
- +'<div class="pv-box"><div class="k">Tipo de financiamento</div><div class="v" style="font-size:12px">'+finLab+'</div></div>'
- +'<div class="pv-box"><div class="k">Subsídio</div><div class="v" style="font-size:12px">'+(subsidioVal>0?brl(subsidioVal):'—')+'</div></div>'
- +'<div class="pv-box"><div class="k">Flags</div><div class="v" style="font-size:11px;font-weight:700">'+(fgtsOn()?'FGTS · ':'')+(depOn()?'Dependentes · ':'')+(sbpe?'SBPE':'')+((fgtsOn()||depOn()||sbpe)?'':'—')+'</div></div>'
- +'</div>'
- +'<div class="pv-foot">Proposta gerada pelo Motor de Cálculo · Proposta+ · '+hoje+' — sujeita a análise de crédito e disponibilidade de estoque.</div>'
+
+ /* setor 3 — proponentes */
+ +'<div class="pv-h2">Proponentes</div>'
+ +'<table class="pv-table"><thead><tr><th>Nome</th><th>CPF</th><th>Profissão</th><th>Renda</th></tr></thead><tbody>'+(buyersRows||'<tr><td colspan="4">—</td></tr>')+'</tbody></table>'
+ +'<div class="pv-note" style="font-style:normal">Renda total: <b>'+esc(sv(g('rendatot').textContent))+'</b>'+(subsidioVal>0?' &nbsp;·&nbsp; Subsídio: <b>'+nb(subsidioVal)+'</b>':'')+(fgtsOn()?' &nbsp;·&nbsp; FGTS':'')+(sbpe?' &nbsp;·&nbsp; SBPE':'')+'</div>'
+ +fiadorHTML
+
+ /* setor 4 — fluxo */
+ +'<div class="pv-h2">Fluxo <span class="pv-tag pre" style="margin-left:6px">PRÉ</span> <span class="pv-tag pos">PÓS</span></div>'
+ +'<table class="pv-table"><thead><tr><th>Tipo</th><th>Qtd</th><th>Valor</th><th>1ª data</th><th style="text-align:right">Total</th></tr></thead><tbody>'+(fluxRows||'<tr><td colspan="5">—</td></tr>')+'</tbody></table>'
+ +ajusteNota
+ +'<div class="pv-foot">Proposta gerada pelo Motor de Cálculo · Proposta+ · '+hoje+' — valores em R$ · sujeita a análise de crédito e disponibilidade de estoque.</div>'
  +'</div>'}
 /* grava a proposta na tabela `propostas` (ver propostas.sql) e devolve o nº pro cabeçalho.
    snapshot completo em `dados` (jsonb) — compradores, fluxo, checklist — pra reabrir depois.
