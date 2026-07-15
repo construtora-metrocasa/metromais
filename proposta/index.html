@@ -69,6 +69,9 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
 .cit{padding:8px 12px;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cit:hover,.cit.act{background:var(--soft)}
 .cit.muted{color:var(--mut);cursor:default}
+.cit.instock{background:var(--green-bg)}
+.cit.instock:hover,.cit.instock.act{background:#DCF0E4}
+.cit.instock .stkflag{float:right;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--green);border-radius:10px;padding:1px 7px;margin-left:8px}
 .obracard{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:13px;font-size:12.5px;color:var(--ink)}
 .obracard b{font-weight:900}
 .obrabar{height:6px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:7px}
@@ -246,6 +249,86 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
 .homeempty{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:44px 30px;text-align:center;color:var(--mut);grid-column:1/-1}
 .homeerr{background:var(--amber-bg);border:1px solid #F0D2A6;border-radius:var(--r);padding:16px 20px;color:var(--amber);font-size:13px;grid-column:1/-1}
 
+/* ===== assistente "imóvel ideal" (quiz portado do Proposta+) ===== */
+.quizov{position:fixed;inset:0;background:rgba(10,9,8,.88);display:none;align-items:center;justify-content:center;z-index:300;padding:18px}
+.quizov.on{display:flex}
+.quizcard.pmode{position:fixed;top:0;left:0;right:0;width:100%;height:100%;height:100dvh;max-width:none;max-height:none;border-radius:0;box-shadow:none;padding:0;overflow:hidden;display:flex;background:#fff}
+#q_pres{display:flex;flex-direction:column;flex:1;min-height:0}
+.pm-money{padding:6px 2px}
+.pm-moneyinput{width:100%;height:64px;border:2px solid var(--line);border-radius:14px;padding:0 20px;font-size:30px;font-family:inherit;color:var(--ink);outline:none;box-sizing:border-box}
+.pm-moneyinput:focus{border-color:var(--red)}
+.pm-chiplbl{font-size:13px;color:var(--mut);margin:16px 0 10px}
+.pm-chips{display:flex;flex-wrap:wrap;gap:10px}
+.pm-chip{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:10px 18px;font-size:15px;font-weight:800;color:var(--ink);cursor:pointer;font-family:inherit;transition:.15s}
+.pm-chip:hover{border-color:#E9A0A3}
+.pm-load{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:40px}
+.pm-loadspin{width:56px;height:56px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--red);animation:pmspin .9s linear infinite}
+@keyframes pmspin{to{transform:rotate(360deg)}}
+.pm-loadtxt{font-size:19px;font-weight:800;color:var(--ink);text-align:center;opacity:1;transition:opacity .25s ease;max-width:400px}
+.pm-loadtxt.out{opacity:0}
+.pm-top{display:flex;align-items:center;gap:14px;padding:20px 32px 12px;flex:none}
+.pm-bar{flex:1;height:6px;background:var(--line);border-radius:4px;overflow:hidden}
+.pm-fill{height:100%;background:var(--red);border-radius:4px;transition:width .45s cubic-bezier(.4,0,.2,1)}
+.pm-x{background:none;border:none;color:var(--mut);cursor:pointer;font-size:20px;padding:2px 6px;flex:none}
+.pm-stage{flex:1;min-height:0;position:relative;overflow:hidden}
+.pm-slide{position:absolute;inset:0;display:grid;grid-template-columns:57% 43%;animation:pmIn .42s cubic-bezier(.4,0,.2,1)}
+.pm-slide.back{animation-name:pmInB}
+.pm-slide.noanim,.pm-slide.noanim .pm-card{animation:none}
+@keyframes pmIn{from{opacity:0;transform:translateX(48px)}to{opacity:1;transform:none}}
+@keyframes pmInB{from{opacity:0;transform:translateX(-48px)}to{opacity:1;transform:none}}
+.pm-left{padding:16px 32px 20px 40px;display:flex;flex-direction:column;min-width:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#D8D4CE transparent}
+.pm-left::-webkit-scrollbar{width:6px}
+.pm-left::-webkit-scrollbar-thumb{background:#D8D4CE;border-radius:4px}
+.pm-title{font-size:34px;font-weight:900;line-height:1.12;color:var(--ink);flex:none;letter-spacing:-.01em}
+.pm-sub{font-size:15px;color:var(--mut);line-height:1.55;margin:8px 0 18px;max-width:520px;flex:none}
+.pm-qhead{text-align:center;margin-bottom:18px;flex:none}
+.pm-qico{width:48px;height:48px;border-radius:50%;background:#FDECEC;display:inline-flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:6px}
+.pm-q{font-size:24px;font-weight:800;color:var(--ink)}
+.pm-hint{font-size:14px;color:var(--mut);margin-top:4px}
+.pm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start}
+.pm-grid.g1{grid-template-columns:1fr}
+.pm-card{position:relative;display:flex;align-items:flex-start;gap:12px;padding:16px 14px;border:1.5px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;text-align:left;font-family:inherit;transition:border-color .15s,background .15s;animation:pmCard .38s cubic-bezier(.4,0,.2,1) both}
+@keyframes pmCard{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.pm-card:hover{border-color:#E9A0A3}
+.pm-card.sel{border-color:var(--red);background:#FDF1F1}
+.pm-card.pm-dis{opacity:.38;pointer-events:none}
+.pm-cico{flex:none;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px}
+.pm-ctxt{flex:1;min-width:0;display:block}
+.pm-ct{display:block;font-size:17px;font-weight:800;color:var(--ink);line-height:1.25;padding-right:16px}
+.pm-cd{display:block;font-size:14px;color:var(--mut);line-height:1.4;margin-top:3px}
+.pm-radio{position:absolute;top:13px;right:13px;width:17px;height:17px;border-radius:50%;border:1.5px solid #CFCBC4;background:#fff;transition:.15s;display:flex;align-items:center;justify-content:center}
+.pm-radio.sq{border-radius:5px}
+.pm-card.sel .pm-radio{background:var(--red);border-color:var(--red);box-shadow:inset 0 0 0 3px #fff}
+.pm-card.sel .pm-radio.sq{box-shadow:none}
+.pm-card.sel .pm-radio.sq::after{content:'✓';color:#fff;font-size:11px;font-weight:900;line-height:1}
+.pm-right{background:#FAF7F3;overflow:hidden}
+.pm-right svg{width:100%;height:100%;display:block}
+.pm-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 32px;border-top:1px solid var(--line);flex:none}
+.pm-priv{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--mut);min-width:0}
+.pm-shield{font-size:15px}
+.pm-btns{display:flex;gap:10px;flex:none}
+.pm-back{border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:12px 20px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s}
+.pm-back:hover{background:var(--soft)}
+.pm-next{border:none;background:var(--red);color:#fff;border-radius:10px;padding:12px 26px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s}
+.pm-next:hover:not(:disabled){background:var(--red-d)}
+.pm-next:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:860px){.pm-slide{grid-template-columns:1fr}.pm-right{display:none}.pm-grid{grid-template-columns:repeat(2,1fr)}.pm-title{font-size:26px}}
+@media(max-width:560px){.pm-grid{grid-template-columns:1fr}.pm-left{padding:6px 18px 14px}.pm-top{padding:16px 18px 10px}.pm-foot{padding:12px 18px}.pm-privtx{display:none}.pm-back{padding:12px 16px}}
+@media(max-height:760px){.pm-title{font-size:clamp(20px,3.4vh,28px)}.pm-sub{margin:4px 0 10px;font-size:13px}.pm-qhead{margin-bottom:10px}.pm-qico{width:36px;height:36px;font-size:16px;margin-bottom:2px}.pm-q{font-size:19px}.pm-card{padding:10px 12px;gap:9px}.pm-cico{width:34px;height:34px;font-size:16px}.pm-grid{gap:8px}.pm-top{padding:12px 32px 8px}.pm-foot{padding:10px 32px}}
+@media(max-height:640px) and (max-width:860px){.pm-cd{display:none}.pm-ct{font-size:15px}}
+/* recomendações de unidades */
+.recogrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.recogrid{grid-template-columns:1fr}}
+.recocard{border:1px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer;background:#F4FBF6;transition:.12s}
+.recocard:hover{border-color:var(--green);box-shadow:0 4px 14px -6px rgba(23,144,70,.4)}
+.rcomatch{font-size:11px;font-weight:700;color:var(--green);margin-left:4px}
+.rcomatch--med{color:var(--amber)}
+.rc1{font-weight:900;font-size:13px;color:var(--ink)}
+.rc2{font-size:12px;color:var(--mut);margin:2px 0}
+.rc3{font-weight:800;font-size:14px;color:var(--red-d)}
+.creg{font-size:11px;color:var(--mut);font-weight:600;text-transform:capitalize}
+.recohint{font-size:12px;color:var(--mut)}
+
 /* ===== impressão =====
    layout compacto de 1 página só — tipografia e espaçamentos reduzidos de propósito
    pra caber tudo sem quebra de página (page-break-inside:avoid no .pv-page). */
@@ -360,6 +443,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
  </div>
 </div>
 
+<!-- assistente "imóvel ideal" -->
+<div id="quiz" class="quizov">
+ <div class="quizcard pmode" id="q_card">
+  <div id="q_pres"></div>
+ </div>
+</div>
+
 <div class="page" id="page" style="display:none">
  <div class="kpibar" id="kpibar">
   <div class="kpi"><span class="kk">Proposta</span><b id="k_venda">—</b></div>
@@ -392,7 +482,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
 
    <div class="card">
     <h2><span class="n">2</span>Identificação da proposta e unidade</h2>
-    <p class="cardsub">Empreendimento, unidade e valores negociados.</p>
+    <p class="cardsub">Empreendimento, unidade e valores negociados. <span class="addlink" style="font-size:12px;cursor:pointer" onclick="abrirQuizIdeal()">🏡 assistente imóvel ideal</span></p>
+    <div id="recobox" style="display:none;margin:0 0 14px"></div>
     <div class="grid2 row">
      <div><label class="lbl">Empreendimento</label><div class="combo"><input class="inp" id="empreend" placeholder="Buscar empreendimento…" autocomplete="off" onfocus="showCombo('emp',true)" oninput="showCombo('emp')" onblur="hideCombo('emp')"><div class="combolist" id="emp_list"></div></div></div>
      <div><label class="lbl">Unidade</label><div class="combo"><input class="inp" id="unidade" placeholder="Buscar unidade…" autocomplete="off" onfocus="showCombo('unid',true)" oninput="showCombo('unid')" onblur="hideCombo('unid')"><div class="combolist" id="unid_list"></div></div></div>
@@ -1132,6 +1223,7 @@ async function carregarDadosRemotos(){
   /* boot leve: só listas pequenas (obras + matriz de alçada). As ~31 mil unidades
      NÃO são baixadas aqui — carregam sob demanda ao escolher o empreendimento. */
   carregarCorretores(); /* em paralelo, sem travar o boot */
+  carregarEstoqueReco(); /* estoque em paralelo — marca unidades em verde no combo */
   var res=await Promise.all([
    fetchAll_('obras_andamento','empreendimento,pct,entrega_prevista',['empreendimento']),
    fetchAll_('regra_alcada','alcada,tipologia,tipo,metragem,requer_aprovacao,m2_venda_ok,m2_prechaves_ok,garantido_ok,pos_chaves_meses,pct_pos_chaves',['alcada','tipologia']),
@@ -1149,6 +1241,9 @@ async function carregarDadosRemotos(){
    console.log('matriz de alçada carregada do Supabase:',res[1].length,'regras ·',res[2].length,'empreendimentos');
   }
   if(hint)hint.textContent='✓ '+EMPLIST.length+' empreendimentos na base. As unidades carregam ao selecionar o empreendimento.';
+  /* regiões p/ o assistente (consulta separada e tolerante: se a coluna não existir, segue sem) */
+  try{var rgs=await fetchAll_('obras_andamento','empreendimento,regiao',['empreendimento']);
+   rgs.forEach(function(x){if(OBRAS_IDX[x.empreendimento])OBRAS_IDX[x.empreendimento].regiao=x.regiao||''})}catch(e){}
  }catch(e){
   console.error('falha ao carregar dados remotos',e);
   if(hint)hint.textContent='⚠ Não foi possível carregar a base. Preencha os campos manualmente.';
@@ -1186,10 +1281,13 @@ function showCombo(kind,all){
  }else{
   if(!EMPSEL)html='<div class="cit muted">escolha o empreendimento primeiro</div>';
   else if(!EMP_IDX[EMPSEL]){html='<div class="cit muted">carregando unidades…</div>';carregarUnidades(EMPSEL)}
-  else html=(EMP_IDX[EMPSEL]||[]).filter(function(u){return !f||normTxt(u.unidade+' '+(u.tipologia||'')).indexOf(f)>=0})
-   .map(function(u){return '<div class="cit" data-v="'+esc(u.unidade)+'">'+esc(u.unidade)
+  else{carregarEstoqueReco(); /* garante o Set de estoque p/ marcar em verde */
+   html=(EMP_IDX[EMPSEL]||[]).filter(function(u){return !f||normTxt(u.unidade+' '+(u.tipologia||'')).indexOf(f)>=0})
+   .map(function(u){var stk=emEstoque(EMPSEL,u.unidade);
+    return '<div class="cit'+(stk?' instock':'')+'" data-v="'+esc(u.unidade)+'">'+esc(u.unidade)
     +(u.area_total!=null?' · '+String(u.area_total).replace('.',',')+' m²':'')
-    +(u.tipologia?' · '+esc(u.tipologia):'')+'</div>'}).join('');
+    +(u.tipologia?' · '+esc(u.tipologia):'')
+    +(stk?'<span class="stkflag">estoque</span>':'')+'</div>'}).join('');}
  }
  list.innerHTML=html||'<div class="cit muted">sem resultados</div>';list.style.display='block';
 }
@@ -1308,7 +1406,8 @@ async function showHome(){
  var r=await window.sb.from('propostas')
   .select('id,criado_em,empreendimento,unidade,tipologia,categoria,valor_tabela,valor_venda,status,cadeia_corretor,cadeia_gerente,cadeia_superintendente,cadeia_diretor,dados')
   .eq('criado_por',window.USER_EMAIL).order('criado_em',{ascending:false}).limit(60);
- var html='<button class="newprop" onclick="novaProposta()"><span class="plus">＋</span>Nova proposta</button>';
+ var html='<button class="newprop" onclick="novaProposta()"><span class="plus">＋</span>Nova proposta</button>'
+  +'<button class="newprop" onclick="abrirQuizIdeal()"><span class="plus" style="background:var(--green)">🏡</span>Encontrar imóvel ideal</button>';
  if(r.error){
   console.error('erro ao listar propostas',r.error);
   html+='<div class="homeerr">⚠ Não foi possível carregar as propostas ('+esc(r.error.message||'')+').<br>Se a tabela ainda não existe, rode o <b>propostas.sql</b> no Supabase.</div>';
@@ -1344,9 +1443,10 @@ function entrarNoMotor(){
  g('topbar').style.display='flex';g('page').style.display='block';
  if(!window.__booted){window.__booted=true;bootApp()}
 }
-function novaProposta(){entrarNoMotor();if(window.__usedOnce)resetForm();window.__usedOnce=true}
+function novaProposta(){window.PESQUISA_ID=null;entrarNoMotor();if(window.__usedOnce)resetForm();window.__usedOnce=true}
 function voltarHome(){showHome()}
 function resetForm(){
+ window.PESQUISA_ID=null;
  g('buyers').innerHTML='';addBuyer();
  g('flux').innerHTML='';
  EMPSEL=null;g('empreend').value='';g('unidade').value='';renderObra(null);
@@ -1406,6 +1506,369 @@ function abrirProposta(i){
  g('cv_diretor').value=p.cadeia_diretor||'';
  refreshAtoLabels&&refreshAtoLabels();
  calc()}
+
+/* ===== assistente "imóvel ideal" — quiz + recomendação por estoque =====
+   portado do Proposta+ (mesmas perguntas, mesma pontuação):
+   tipologia 0-40 · região 0-20 · deslocamento→metrô 0-10; desempate pela
+   prioridade (menor parcela → menor tabela; maior apto → maior área; senão
+   mais estoque no empreendimento). Estoque = tabela `unidades` do Supabase
+   (fora só o que está marcado esta_na_sv = "não..."), máx. 1 unidade por
+   empreendimento, até 6 sugestões. */
+function snorm(x){return (x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim().toUpperCase()}
+var QN=1,QSCR=0,QBUYERS=[],QSHARED={},QPHASE='perfil',SCREENS=[],QPSCR=0,PSCREENS=[],QDIR=1,PMLAST=null,QF=null,QLOADING=false;
+var QPSTEPS=[
+ {k:'motivo',t:'choice',ic:'✨',q:'O que mais motivou você a procurar um imóvel hoje?',hint:'Escolha a opção que mais combina com você.',
+  sub:'Responda algumas perguntas rápidas e receba recomendações personalizadas para você.',o:[
+  ['Sonho da casa própria','❤️','É o momento de conquistar meu lugar.'],
+  ['Quero investir','💰','Busco um imóvel para gerar renda ou valorizar.'],
+  ['Família cresceu','👨‍👩‍👧','Preciso de mais espaço e conforto.'],
+  ['Morar perto do trabalho','🚇','Quero mais tempo e praticidade no dia a dia.'],
+  ['Sair do aluguel','🏡','Quero parar de pagar aluguel e investir no que é meu.'],
+  ['Trocar de imóvel','🔄','Quero algo melhor que atenda minhas novas necessidades.']
+ ]},
+ {k:'composicao',t:'choice',ic:'👥',q:'Quem vai morar com você?',hint:'Escolha a opção que mais se parece com a sua realidade.',
+  sub:'Cada resposta nos ajuda a entender melhor o que você procura e indicar as melhores opções para você.',o:[
+  ['Vou morar sozinho(a)','🧍','É só eu que vou morar no imóvel.',1,'Sozinho(a)'],
+  ['Comprador(a) e parceiro(a)','💑','Vou morar com meu parceiro(a).',2,'Com cônjuge/parceiro(a)'],
+  ['Família com filhos','👪','Tenho filhos e procuramos mais espaço e conforto.',2,'Com família (morar junto)'],
+  ['Com pet','🐾','Meu pet faz parte da família e precisa de um lugar adequado.',1,'Sozinho(a)'],
+  ['Com familiares','👨‍👩‍👦','Vou dividir o imóvel com pais, irmãos ou outros familiares.',1,'Com família (morar junto)']
+ ]},
+ {k:'deslocamento',t:'choice',ic:'🚇',q:'Como é sua rotina de deslocamento?',hint:'Escolha a opção que mais combina com você.',
+  sub:'Suas preferências nos ajudam a sugerir os melhores empreendimentos para o seu perfil.',o:[
+  ['Usa metrô','🚇','Uso o metrô praticamente todos os dias.'],
+  ['Usa carro','🚗','Uso carro na maior parte do tempo.'],
+  ['Home office','🏠','Trabalho de casa ou tenho flexibilidade total.'],
+  ['Depende de ônibus','🚌','O ônibus é meu principal meio de transporte.'],
+  ['Prefere tudo perto de casa','🚶','Prefiro resolver tudo a pé ou de bike.']
+ ]},
+ {k:'tipologia',t:'choice',ic:'🛏️',q:'Como você imagina seu apartamento ideal?',hint:'Escolha a opção que mais se aproxima do que você procura.',
+  sub:'Suas respostas nos ajudam a sugerir as tipologias que mais combinam com você.',o:[
+  ['Studio','🛋️','Ambiente integrado e funcional, ideal para quem busca praticidade.'],
+  ['1 dormitório','🛏️','Mais privacidade e conforto para o dia a dia.'],
+  ['2 dormitórios','🏠','Mais espaço para sua família, hóspedes ou home office.']
+ ]},
+ {k:'prioridade',t:'choice',ic:'⭐',q:'Se pudesse escolher apenas uma prioridade...',hint:'Escolha a opção que é mais importante para você no momento.',
+  sub:'Suas prioridades nos ajudam a direcionar as melhores opções para o que realmente importa para você.',o:[
+  ['Melhor localização','📍','Quero estar perto do que importa: trabalho, metrô e serviços.'],
+  ['Menor parcela','💳','Quero que caiba no meu orçamento com tranquilidade financeira.'],
+  ['Maior apartamento','📐','Quero mais espaço e conforto para viver bem.'],
+  ['Melhor condomínio','🏢','Quero lazer completo, segurança e comodidades.'],
+  ['Maior valorização','📈','Quero um investimento inteligente com potencial de retorno.']
+ ]},
+ {k:'lazer',t:'multi',max:3,ic:'🏊',q:'Quais áreas de lazer são essenciais para você?',hint:'Selecione até 3 opções que não podem faltar no seu futuro condomínio.',
+  sub:'Saber o que você busca em um condomínio nos ajuda a mostrar empreendimentos que combinam com seu estilo de vida.',o:[
+  ['Academia','🏋️','Rotina de exercícios sem sair de casa.'],
+  ['Playground','🎠','Para as crianças brincarem com segurança.'],
+  ['Salão de festas','🎉','Para celebrar momentos especiais.'],
+  ['Churrasqueira','🍖','Para reunir amigos e família.'],
+  ['Espaço pet','🐾','Meu pet também merece um espaço especial.'],
+  ['Coworking','💻','Ambiente para trabalhar ou estudar com conforto.'],
+  ['Indiferente','🤷','Nenhuma das opções é essencial para mim.']
+ ]},
+ {k:'diferenciais',t:'multi',max:5,ic:'🌟',q:'Quais diferenciais são importantes para você?',hint:'Selecione até 5 opções que mais agregam valor para seu estilo de vida.',
+  sub:'Cada detalhe importa! Escolha os diferenciais que fazem mais sentido para o seu dia a dia.',o:[
+  ['Portaria 24h','🔐','Prioridade para segurança e tranquilidade.'],
+  ['Energia solar','☀️','Economia na conta de luz e menor impacto ambiental.'],
+  ['Bicicletário','🚲','Incentivo à mobilidade saudável e sustentável.'],
+  ['Wi-Fi nas áreas comuns','📶','Conectividade para trabalhar, estudar e se divertir.'],
+  ['Espaço delivery','📦','Receber encomendas com segurança e praticidade.'],
+  ['Sustentabilidade','🌿','Valorizo práticas sustentáveis e construções verdes.']
+ ]}
+];
+function buildPerfil(){PSCREENS=QPSTEPS.map(function(st){return {st:st}})}
+var QBSTEPS=[
+ {k:'renda',t:'money',ic:'💰',q:function(b){return QN>1?'Qual a renda mensal do comprador '+(b+1)+'?':'Qual a renda mensal?'},hint:'Digite o valor ou escolha uma sugestão.',
+  sub:'Sua renda nos ajuda a calcular as condições de pagamento e o financiamento ideal.',ph:'R$ 0'},
+ {k:'vinc',t:'choice',ic:'💼',q:function(b){return QN>1?'Qual o vínculo do comprador '+(b+1)+'?':'Qual o vínculo de trabalho?'},hint:'Escolha a opção que mais combina com a sua situação.',
+  sub:'O vínculo de trabalho influencia as condições de financiamento disponíveis.',o:[['Registrado (CLT)','🪪'],['Autônomo','💼'],['Informal','🧾']]},
+ {k:'clt3',t:'choice',ic:'🪪',q:'Tem carteira assinada há 3+ anos?',hint:'Isso pode liberar condições especiais de financiamento.',
+  sub:'Tempo de carteira assinada é um critério importante para algumas linhas de crédito.',o:[['Sim','✅'],['Não','—']],cond:function(a){return (a.vinc||'').indexOf('CLT')>=0}}
+];
+var QSSTEPS=[
+ {k:'depq',t:'choice',ic:'👶',q:'Tem filhos ou dependentes menores?',hint:'Isso pode influenciar as condições de financiamento.',
+  sub:'Saber sobre dependentes nos ajuda a montar a proposta mais adequada para você.',o:[['Não','🙅'],['Sim','👶']]},
+ {k:'imovel',t:'choice',ic:'🔑',q:function(){return QN>1?'Algum dos compradores já tem imóvel no nome?':'Já tem imóvel no próprio nome?'},hint:'Essa informação afeta a elegibilidade para alguns programas.',
+  sub:'Ter ou não um imóvel no nome influencia o acesso a programas como FGTS e SBPE.',o:[['Não','🔎'],['Sim','🔑']]},
+ {k:'regioes',t:'multi',ic:'📍',q:'Quais regiões interessam a você?',hint:'Pode escolher mais de uma opção.',
+  sub:'Suas regiões preferidas direcionam as melhores recomendações de empreendimentos.',o:[['Indiferente','🧭'],['Zona Leste','📍'],['Zona Sul','📍'],['Zona Norte','📍'],['Zona Oeste','📍'],['Centro','📍']]}
+];
+function buildScreens(){SCREENS=[];for(var b=0;b<QN;b++)QBSTEPS.forEach(function(st){SCREENS.push({b:b,st:st})});QSSTEPS.forEach(function(st){SCREENS.push({b:-1,st:st})})}
+function ansOf(sc){return sc.b>=0?(QBUYERS[sc.b]=QBUYERS[sc.b]||{}):QSHARED}
+function scrVis(i){var sc=SCREENS[i];return !sc.st.cond||sc.st.cond(ansOf(sc))}
+function scrFirst(){for(var i=0;i<SCREENS.length;i++)if(scrVis(i))return i;return 0}
+function scrNext(f){for(var i=f+1;i<SCREENS.length;i++)if(scrVis(i))return i;return -1}
+function scrPrev(f){for(var i=f-1;i>=0;i--)if(scrVis(i))return i;return -1}
+function abrirQuizIdeal(){QN=1;QSCR=0;QPSCR=0;QDIR=1;PMLAST=null;QBUYERS=[];QSHARED={};QPHASE='perfil';buildPerfil();
+ carregarEstoqueReco(); /* começa a baixar o estoque em paralelo às perguntas */
+ g('quiz').classList.add('on');renderWiz()}
+function closeQuiz(){g('quiz').classList.remove('on')}
+function qPick(v){var sc=SCREENS[QSCR];ansOf(sc)[sc.st.k]=v;renderPicks()}
+function qPickMulti(v){var sc=SCREENS[QSCR],a=ansOf(sc),k=sc.st.k,arr=(a[k]||[]).slice();
+ if(v==='Indiferente')arr=['Indiferente'];
+ else{arr=arr.filter(function(x){return x!=='Indiferente'});var ix=arr.indexOf(v);if(ix>=0)arr.splice(ix,1);else arr.push(v)}
+ a[k]=arr;renderPicks()}
+function qInputV(v){var sc=SCREENS[QSCR];ansOf(sc)[sc.st.k]=v;var b=g('pm_next');if(b)b.disabled=!qAnswered()}
+function qMoneyChip(v){var val=brl(v),sc=SCREENS[QSCR];ansOf(sc)[sc.st.k]=val;var inp=g('pm_moneyinput');if(inp){inp.value=val;try{inp.focus()}catch(e){}}var b=g('pm_next');if(b)b.disabled=!qAnswered()}
+function qPickP(v){var st=PSCREENS[QPSCR].st;QSHARED[st.k]=v;
+ if(st.k==='composicao'){var o=st.o.filter(function(x){return x[0]===v})[0];if(o){QN=o[3];QSHARED.compor=o[4]}}
+ renderPicks()}
+function qPickMP(v){var st=PSCREENS[QPSCR].st,k=st.k,maxSel=st.max||99,arr=(QSHARED[k]||[]).slice();if(v==='Indiferente'){arr=['Indiferente']}else{arr=arr.filter(function(x){return x!=='Indiferente'});var ix=arr.indexOf(v);if(ix>=0)arr.splice(ix,1);else if(arr.length<maxSel)arr.push(v)}QSHARED[k]=arr;renderPicks()}
+function qAnswered(){var sc=(QPHASE==='perfil')?PSCREENS[QPSCR]:SCREENS[QSCR],st=sc.st,v=(QPHASE==='perfil'?QSHARED:ansOf(sc))[st.k];if(st.t==='choice')return !!v;if(st.t==='multi')return (v||[]).length>0;if(st.t==='money')return cur(v||'')>0;return (v||'').toString().trim()!==''}
+function qBack(){if(QPHASE==='perfil'){if(QPSCR>0){QPSCR--;QDIR=-1;renderWiz();return}closeQuiz();return}
+ var p=scrPrev(QSCR);if(p>=0){QSCR=p;QDIR=-1;renderWiz();return}
+ QPHASE='perfil';QDIR=-1;QPSCR=PSCREENS.length-1;renderWiz()}
+function qAdvance(){if(QPHASE==='perfil'){if(!qAnswered())return;if(QPSCR<PSCREENS.length-1){QPSCR++;QDIR=1;renderWiz();return}buildScreens();QPHASE='flow';QSCR=scrFirst();QDIR=1;renderWiz();return}
+ if(!qAnswered())return;var n=scrNext(QSCR);if(n>=0){QSCR=n;QDIR=1;renderWiz();return}finishQuiz()}
+function pmTotalFlow(){var t=0;for(var i=0;i<SCREENS.length;i++)if(scrVis(i))t++;return t}
+function pmDone(){if(QPHASE==='perfil')return QPSCR+1;var vis=0;for(var j=0;j<=QSCR;j++)if(scrVis(j))vis++;return PSCREENS.length+vis}
+function pmTotal(){if(QPHASE==='perfil')return PSCREENS.length+QN*QBSTEPS.length+QSSTEPS.length;return PSCREENS.length+pmTotalFlow()}
+function pmRoom(ix){var P=[['#EF9A9A','#A5D6A7','#80CBC4'],['#9FA8DA','#FFCC80','#F48FB1'],['#CE93D8','#FFAB91','#81D4FA'],['#80CBC4','#EF9A9A','#C5E1A5'],['#FFD54F','#90CAF9','#AED581'],['#F48FB1','#80DEEA','#FFCC80'],['#A5D6A7','#9FA8DA','#FFAB91'],['#90CAF9','#CE93D8','#A5D6A7']][ix%8],a=P[0],b=P[1],c=P[2];
+ return '<svg viewBox="0 0 300 460" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+ +'<rect width="300" height="460" fill="#FAF7F3"/>'
+ +'<rect x="150" y="14" width="136" height="200" rx="6" fill="#DCEBF7"/>'
+ +'<rect x="150" y="14" width="136" height="200" rx="6" fill="none" stroke="#C9DDEE" stroke-width="5"/>'
+ +'<line x1="218" y1="14" x2="218" y2="214" stroke="#C9DDEE" stroke-width="2.5"/>'
+ +'<line x1="150" y1="114" x2="286" y2="114" stroke="#C9DDEE" stroke-width="2.5"/>'
+ +'<g fill="#AFC8DD"><rect x="155" y="128" width="12" height="86"/><rect x="171" y="118" width="15" height="96"/><rect x="190" y="134" width="10" height="80"/><rect x="204" y="122" width="12" height="92"/><rect x="222" y="130" width="14" height="84"/><rect x="240" y="118" width="16" height="96"/><rect x="260" y="136" width="13" height="78"/></g>'
+ +'<rect x="0" y="352" width="300" height="108" fill="#EDE5DB"/><rect x="0" y="352" width="300" height="6" fill="#E0D6CA"/>'
+ +'<ellipse cx="150" cy="420" rx="130" ry="26" fill="#E4DACC"/>'
+ +'<rect x="14" y="272" width="210" height="40" rx="10" fill="#D2BFA4"/>'
+ +'<rect x="14" y="292" width="210" height="66" rx="11" fill="#DECDB6"/>'
+ +'<rect x="4" y="282" width="18" height="58" rx="8" fill="#C9B396"/><rect x="220" y="282" width="18" height="58" rx="8" fill="#C9B396"/>'
+ +'<rect x="26" y="300" width="88" height="52" rx="7" fill="#E7D9C4"/><rect x="122" y="300" width="88" height="52" rx="7" fill="#E7D9C4"/>'
+ +'<rect x="40" y="282" width="40" height="32" rx="6" fill="'+a+'"/>'
+ +'<rect x="138" y="282" width="40" height="32" rx="6" fill="'+b+'"/>'
+ +'<ellipse cx="132" cy="392" rx="74" ry="14" fill="#C9A87E"/><rect x="70" y="392" width="8" height="26" fill="#B08F62"/><rect x="186" y="392" width="8" height="26" fill="#B08F62"/>'
+ +'<rect x="106" y="380" width="34" height="7" rx="2" fill="'+c+'"/><rect x="112" y="373" width="34" height="7" rx="2" fill="#8D6E63"/>'
+ +'<rect x="252" y="296" width="34" height="52" rx="7" fill="#9C7A5B"/>'
+ +'<rect x="267" y="242" width="5" height="58" fill="#6D4C41"/>'
+ +'<ellipse cx="276" cy="234" rx="22" ry="16" fill="#66BB6A"/><ellipse cx="258" cy="226" rx="18" ry="13" fill="#81C784"/><ellipse cx="280" cy="214" rx="14" ry="12" fill="#4CAF50"/><ellipse cx="260" cy="210" rx="12" ry="10" fill="#A5D6A7"/>'
+ +'<rect x="28" y="58" width="84" height="104" rx="5" fill="#F3EEE6" stroke="#E0D6CA" stroke-width="2.5"/>'
+ +'<circle cx="70" cy="106" r="22" fill="'+c+'" opacity=".5"/><circle cx="84" cy="92" r="14" fill="'+c+'" opacity=".35"/>'
+ +'<rect x="44" y="128" width="46" height="12" rx="3" fill="'+c+'" opacity=".3"/>'
+ +'</svg>'}
+function renderWiz(){var pres=g('q_pres');if(!pres)return;
+ var isPerfil=QPHASE==='perfil',st,ans,qtext,sameKey;
+ if(isPerfil){st=PSCREENS[QPSCR].st;ans=QSHARED;qtext=st.q;sameKey='p'+QPSCR}
+ else{var sc=SCREENS[QSCR];st=sc.st;ans=ansOf(sc);qtext=(typeof st.q==='function')?st.q(sc.b):st.q;sameKey='f'+QSCR+'-'+sc.b}
+ var same=(PMLAST===sameKey),pl0=pres.querySelector('.pm-left'),sc0=pl0?pl0.scrollTop:0;
+ var n=pmDone(),tot=pmTotal(),isMulti=st.t==='multi',isMoney=st.t==='money';
+ var v=ans[st.k],arr=isMulti?(v||[]):[],maxSel=st.max||99;
+ var body;
+ if(isMoney){
+  body='<div class="pm-money"><input class="pm-moneyinput" id="pm_moneyinput" inputmode="numeric" placeholder="'+(st.ph||'R$ 0')+'" value="'+esc(v||'')+'" autocomplete="off">'
+  +'<div class="pm-chiplbl">Sugestões rápidas</div>'
+  +'<div class="pm-chips">'+[2000,2500,3000,4000].map(function(c){return '<button type="button" class="pm-chip" data-v="'+c+'">'+brl(c)+'</button>'}).join('')+'</div></div>';
+ }else{
+  var circ=['#FDECEC','#FFF6E0','#EAF7EF','#E8F1FB','#FCE9F1','#F3EAFA','#E7F6F5','#FFF0E7','#F0F0EF'];
+  var cards=st.o.map(function(o,i){var sel=isMulti?arr.indexOf(o[0])>=0:v===o[0],dis=isMulti&&!sel&&arr.length>=maxSel&&o[0]!=='Indiferente';
+   return '<button type="button" class="pm-card'+(sel?' sel':'')+(dis?' pm-dis':'')+'"'+(same?'':' style="animation-delay:'+(60+i*45)+'ms"')+' data-v="'+esc(o[0])+'" role="'+(isMulti?'checkbox':'radio')+'" aria-checked="'+sel+'">'
+   +'<span class="pm-cico" style="background:'+circ[i%circ.length]+'">'+(o[1]||'•')+'</span>'
+   +'<span class="pm-ctxt"><span class="pm-ct">'+o[0]+'</span>'+(o[2]?'<span class="pm-cd">'+o[2]+'</span>':'')+'</span>'
+   +'<span class="pm-radio'+(isMulti?' sq':'')+'"></span></button>'}).join('');
+  var cols=st.o.length<=3?' g1':'';
+  body='<div class="pm-grid'+cols+'">'+cards+'</div>';
+ }
+ var hint=st.hint||'';if(isMulti&&arr.length)hint+=' · '+arr.length+'/'+maxSel;
+ var isLast=!isPerfil&&scrNext(QSCR)<0,nextLabel=isLast?'Ver minhas opções →':'Próximo →';
+ pres.innerHTML='<div class="pm-top"><div class="pm-bar" role="progressbar" aria-valuemin="1" aria-valuemax="'+tot+'" aria-valuenow="'+n+'" aria-label="Progresso do questionário"><div class="pm-fill" style="width:'+Math.min(100,Math.round(n/tot*100))+'%"></div></div><button type="button" class="pm-x" onclick="closeQuiz()" aria-label="Fechar">✕</button></div>'
+ +'<div class="pm-stage"><div class="pm-slide'+(same?' noanim':(QDIR<0?' back':''))+'">'
+ +'<div class="pm-left"><div class="pm-title">Vamos encontrar<br>seu imóvel ideal 🏡</div><div class="pm-sub">'+(st.sub||'')+'</div>'
+ +'<div class="pm-qhead"><div class="pm-qico">'+(st.ic||'✨')+'</div><div class="pm-q" tabindex="-1">'+qtext+'</div><div class="pm-hint" data-base="'+esc(st.hint||'')+'">'+hint+'</div></div>'
+ +body+'</div>'
+ +'<div class="pm-right">'+pmRoom(n-1)+'</div>'
+ +'</div></div>'
+ +'<div class="pm-foot"><div class="pm-priv"><span class="pm-shield">🛡️</span><span class="pm-privtx">Suas respostas são confidenciais e usadas apenas para sugestões personalizadas.</span></div><div class="pm-btns"><button type="button" class="pm-back" onclick="qBack()"'+(QPHASE==='perfil'&&QPSCR===0?' style="visibility:hidden"':'')+'>← Voltar</button><button type="button" class="pm-next" id="pm_next" onclick="qAdvance()"'+(qAnswered()?'':' disabled')+'>'+nextLabel+'</button></div></div>';
+ if(isMoney){var inp=g('pm_moneyinput');inp.oninput=function(){var vv=cur(this.value);this.value=vv?brl(vv):'';qInputV(this.value)};setTimeout(function(){try{inp.focus();inp.scrollIntoView({block:'center'})}catch(e){}},50)}
+ if(same){var pl=pres.querySelector('.pm-left');if(pl)pl.scrollTop=sc0}
+ else if(!isMoney){var qh=pres.querySelector('.pm-q');if(qh)try{qh.focus({preventScroll:true})}catch(e){}}
+ PMLAST=sameKey}
+document.addEventListener('keydown',function(e){var qz=g('quiz');if(!qz||!qz.classList.contains('on')||QLOADING)return;var t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'))return;
+ if(e.key==='Escape'){closeQuiz();return}
+ if(e.key==='ArrowLeft'){qBack();return}
+ if(e.key==='ArrowRight'||e.key==='Enter'){if(e.key==='Enter'&&t&&t.closest&&t.closest('.pm-card'))return;if(qAnswered())qAdvance()}});
+g('q_pres').addEventListener('click',function(e){
+ var chip=e.target.closest('.pm-chip');
+ if(chip){qMoneyChip(parseInt(chip.getAttribute('data-v'),10));return}
+ var card=e.target.closest('.pm-card');
+ if(!card||card.classList.contains('pm-dis'))return;
+ var v=card.getAttribute('data-v');
+ if(QPHASE==='perfil'){var st=PSCREENS[QPSCR].st;if(st.t==='multi')qPickMP(v);else qPickP(v)}
+ else{var st2=SCREENS[QSCR].st;if(st2.t==='multi')qPickMulti(v);else qPick(v)}});
+function renderPicks(){var pres=g('q_pres');if(!pres)return;
+ var isPerfil=QPHASE==='perfil',st,ans;
+ if(isPerfil){st=PSCREENS[QPSCR].st;ans=QSHARED}else{var sc=SCREENS[QSCR];st=sc.st;ans=ansOf(sc)}
+ var isMulti=st.t==='multi',v=ans[st.k],arr=isMulti?(v||[]):[],maxSel=st.max||99;
+ pres.querySelectorAll('.pm-card').forEach(function(card){var cv=card.getAttribute('data-v');
+  var sel=isMulti?arr.indexOf(cv)>=0:v===cv,dis=isMulti&&!sel&&arr.length>=maxSel&&cv!=='Indiferente';
+  card.classList.toggle('sel',sel);card.classList.toggle('pm-dis',dis);card.setAttribute('aria-checked',sel?'true':'false')});
+ var hint=pres.querySelector('.pm-hint');
+ if(hint){var t=hint.getAttribute('data-base')||'';if(isMulti&&arr.length)t+=' · '+arr.length+'/'+maxSel;hint.textContent=t}
+ var nx=g('pm_next');if(nx)nx.disabled=!qAnswered()}
+function perfilRec(compor,tipologia){var tip=(tipologia||'').toLowerCase(),comp=compor||'';
+ if(tip.indexOf('studio')>=0)return'Studio — ambiente compacto e funcional.';
+ if(tip.indexOf('2')>=0)return'2 dormitórios — mais espaço para a família.';
+ if(tip.indexOf('1')>=0)return'1 dormitório — conforto no dia a dia.';
+ if(comp.indexOf('família')>=0)return'1D + Office ou 2D — vai morar junto com a família.';
+ if(comp.indexOf('njuge')>=0)return'1D + Office ou 2D — vão morar juntos.';
+ if(comp.indexOf('Sozinho')>=0||comp.indexOf('Não')>=0)return'Studio — vai morar sozinho(a).';
+ return'Studio / 1D conforme a composição.'}
+var PM_LOAD_PHRASES=['Analisando seu perfil…','Cruzando dados de renda e preferências…','Buscando as melhores oportunidades…','Quase lá…'];
+function qShowLoading(cb){QLOADING=true;
+ var pres=g('q_pres');if(!pres){QLOADING=false;cb();return}
+ pres.innerHTML='<div class="pm-load"><div class="pm-loadspin"></div><div class="pm-loadtxt" id="pm_loadtxt">'+PM_LOAD_PHRASES[0]+'</div></div>';
+ var i=0,txt=g('pm_loadtxt');
+ var iv=setInterval(function(){i++;if(i>=PM_LOAD_PHRASES.length)return;
+  txt.classList.add('out');
+  setTimeout(function(){txt.textContent=PM_LOAD_PHRASES[i];txt.classList.remove('out')},250)},1000);
+ /* espera o mínimo de 4s E o estoque baixar (o que demorar mais) */
+ Promise.all([new Promise(function(r){setTimeout(r,4000)}),carregarEstoqueReco()])
+  .then(function(){clearInterval(iv);QLOADING=false;cb()})}
+function finishQuiz(){qShowLoading(finishQuizReal)}
+function finishQuizReal(){
+ var B=QBUYERS.slice(0,QN);if(!B.length)B=[{}];
+ var rendaTot=B.reduce(function(t,b){return t+cur(b.renda||'')},0);
+ QF={fgts:B.some(function(b){return (b.vinc||'').indexOf('CLT')>=0&&b.clt3==='Sim'}),
+  sbpe:QSHARED.imovel==='Sim',dep:QSHARED.depq==='Sim',
+  regioes:(QSHARED.regioes&&QSHARED.regioes.length?QSHARED.regioes:['Indiferente']),
+  perfil:perfilRec(QSHARED.compor,QSHARED.tipologia),motivo:QSHARED.motivo||'',
+  composicao:QSHARED.composicao||'',deslocamento:QSHARED.deslocamento||'',
+  tipologia:QSHARED.tipologia||'',rendaTot:rendaTot,prioridade:QSHARED.prioridade||'',
+  lazer:QSHARED.lazer||[],diferenciais:QSHARED.diferenciais||[]};
+ /* aplica no motor: compradores + flags derivadas */
+ entrarNoMotor();resetForm();window.__usedOnce=true;
+ g('buyers').innerHTML='';
+ B.forEach(function(b){addBuyer();var el=g('buyers').lastElementChild;
+  el.querySelector('.brenda').value=cur(b.renda||'')?brl(cur(b.renda)):'';
+  el.querySelector('.bfgts').value=((b.vinc||'').indexOf('CLT')>=0&&b.clt3==='Sim')?'SIM':'NÃO';
+  el.querySelector('.bfsocial').value=QF.dep?'COM FILHO(S)':'SEM FILHO'});
+ g('sbpe').checked=QF.sbpe;
+ closeQuiz();calc();renderReco();
+ salvarPesquisa(B); /* registra as respostas p/ estudo posterior (não bloqueia) */
+ var rb=g('recobox');if(rb)setTimeout(function(){try{rb.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}},150)}
+/* salva as respostas do assistente na tabela pesquisas_perfil (uma linha por conclusão).
+   guarda o id em window.PESQUISA_ID pra ligar à proposta quando ela for gerada. */
+window.PESQUISA_ID=null;
+async function salvarPesquisa(B){
+ window.PESQUISA_ID=null;
+ if(!window.sb||!window.USER_EMAIL)return;
+ try{
+  var row={criado_por:window.USER_EMAIL,
+   motivo:QSHARED.motivo||null,composicao:QSHARED.composicao||null,deslocamento:QSHARED.deslocamento||null,
+   tipologia:QSHARED.tipologia||null,prioridade:QSHARED.prioridade||null,
+   lazer:QSHARED.lazer||[],diferenciais:QSHARED.diferenciais||[],regioes:(QF&&QF.regioes)||[],
+   renda_total:(QF&&QF.rendaTot)||0,perfil:(QF&&QF.perfil)||null,
+   fgts:!!(QF&&QF.fgts),sbpe:!!(QF&&QF.sbpe),dependentes:!!(QF&&QF.dep),
+   compradores:(B||[]).map(function(b){return{renda:cur(b.renda||''),vinc:b.vinc||'',clt3:b.clt3||''}}),
+   recomendadas:RECO_LAST};
+  var r=await window.sb.from('pesquisas_perfil').insert(row).select('id').single();
+  if(r.error){console.warn('não foi possível salvar a pesquisa de perfil',r.error);return}
+  window.PESQUISA_ID=r.data&&r.data.id;
+  console.log('pesquisa de perfil salva · id',window.PESQUISA_ID);
+ }catch(e){console.warn('erro ao salvar pesquisa de perfil',e)}}
+/* ---- estoque p/ recomendação ----
+   fonte: tabela `estoque` (planilha de estoque sincronizada — só o que está disponível).
+   fallback: se `estoque` estiver vazia/inexistente, usa `unidades`+esta_na_sv (modo antigo),
+   pra não quebrar antes de a sincronização estar no ar. */
+var RECO_UNITS=null,RECO_LOADING=null,RECO_FONTE='',ESTOQUE_SET=null;
+/* chave normalizada empreendimento||unidade p/ marcar "em estoque" no combo */
+function estKey(emp,unid){return snorm(emp)+'||'+snorm(unid)}
+function buildEstoqueSet(){ESTOQUE_SET={};(RECO_UNITS||[]).forEach(function(u){ESTOQUE_SET[estKey(u.empreendimento,u.unidade)]=1})}
+function emEstoque(emp,unid){return !!(ESTOQUE_SET&&ESTOQUE_SET[estKey(emp,unid)])}
+async function fetchAllReco_(tbl,cols){
+ var out=[],page=1000,from=0;
+ while(true){
+  var r=await window.sb.from(tbl).select(cols).order('empreendimento').order('unidade').range(from,from+page-1);
+  if(r.error)throw r.error;
+  out=out.concat(r.data||[]);
+  if(!r.data||r.data.length<page)break;
+  from+=page;
+ }
+ return out}
+function carregarEstoqueReco(){
+ if(RECO_UNITS)return Promise.resolve(RECO_UNITS);
+ if(RECO_LOADING)return RECO_LOADING;
+ if(!window.sb){RECO_UNITS=[];return Promise.resolve(RECO_UNITS)}
+ RECO_LOADING=(async function(){
+  try{
+   var est=await fetchAllReco_('estoque','empreendimento,unidade,tipologia,area_total,categoria,valor_tabela,regiao,alcada');
+   if(est&&est.length){RECO_UNITS=est;RECO_FONTE='estoque';buildEstoqueSet();
+    console.log('assistente: estoque carregado —',RECO_UNITS.length,'unidades disponíveis (tabela estoque)');
+    if(EMPSEL&&g('unid_list')&&g('unid_list').style.display==='block')showCombo('unid',true);
+    return RECO_UNITS}
+  }catch(e){console.warn('assistente: tabela estoque indisponível, usando fallback',e&&e.message)}
+  /* fallback: unidades + esta_na_sv (modo antigo) */
+  try{
+   var uni=await fetchAllReco_('unidades','empreendimento,unidade,tipologia,area_total,destinacao,classificacao,valor_tabela,esta_na_sv');
+   RECO_UNITS=uni.filter(function(u){var sv=(u.esta_na_sv==null?'':String(u.esta_na_sv)).trim().toLowerCase();return !(sv&&sv.charAt(0)==='n')})
+    .map(function(u){return{empreendimento:u.empreendimento,unidade:u.unidade,tipologia:u.tipologia,area_total:u.area_total,categoria:u.destinacao||u.classificacao,valor_tabela:u.valor_tabela,regiao:''}});
+   RECO_FONTE='unidades';buildEstoqueSet();
+   console.log('assistente: estoque via fallback unidades —',RECO_UNITS.length,'unidades');
+  }catch(e2){console.error('assistente: falha ao carregar estoque',e2);RECO_UNITS=[]}
+  return RECO_UNITS})();
+ return RECO_LOADING}
+/* ---- recomendação (mesmas regras do Proposta+) ---- */
+var RECO_ELEG={lim1:4863,lim2:9726};
+function catElegiveis(renda){
+ if(renda<=RECO_ELEG.lim1)return{'HIS-1':1,'HIS-2':1,'HMP':1,'NR':1,'R2V':1};
+ if(renda<=RECO_ELEG.lim2)return{'HIS-2':1,'HMP':1,'NR':1,'R2V':1};
+ return{'NR':1,'R2V':1}}
+function regOfU(u){return (u&&u.regiao)||(OBRAS_IDX[u.empreendimento]&&OBRAS_IDX[u.empreendimento].regiao)||''}
+function regOf(prod){var ob=OBRAS_IDX[prod];return (ob&&ob.regiao)||''}
+var RECO_LAST=[];
+function renderReco(){var box=g('recobox');if(!box)return;var Q=QF||{};
+ if(!Q.perfil){box.style.display='none';box.innerHTML='';return}
+ box.style.display='block';
+ var titulo='<label class="lbl">🏡 Recomendadas para o cliente <span style="font-weight:600;text-transform:none;letter-spacing:0">· '+esc(Q.perfil)+'</span></label>';
+ var U=RECO_UNITS||[];
+ if(!U.length){box.innerHTML=titulo+'<div class="recohint">Estoque indisponível no momento — selecione manualmente abaixo.</div>';return}
+ var rendaQ=Q.rendaTot||0,elig=rendaQ>0?catElegiveis(rendaQ):null;
+ var tipPref=(Q.tipologia||'').toLowerCase(),pf=(Q.perfil||'').toLowerCase();
+ function tipScore(t){t=(t||'').toLowerCase();
+  var pref=tipPref||pf;
+  if(pref.indexOf('studio')>=0)return t.indexOf('studio')>=0?40:0;
+  if(pref.indexOf('2')>=0)return t.indexOf('2d')>=0?40:(t.indexOf('office')>=0?20:0);
+  if(pref.indexOf('1')>=0)return(t.indexOf('1d')>=0||t.indexOf('office')>=0)?40:0;
+  return t.indexOf('office')>=0||t.indexOf('2d')>=0?20:10}
+ var regs=(Q.regioes||[]).filter(function(r){return r&&r!=='Indiferente'}).map(snorm),useReg=regs.length>0;
+ var desl=(Q.deslocamento||'').toLowerCase(),metroZones=['ZONA LESTE','ZONA SUL','CENTRO'];
+ var prio=(Q.prioridade||'').toLowerCase();
+ var sc={};U.forEach(function(u){sc[u.empreendimento]=(sc[u.empreendimento]||0)+1});
+ var scored=[];
+ U.forEach(function(u){
+  var cat=((u.categoria||'')+'').toUpperCase().trim();
+  if(elig&&cat&&!elig[cat])return;
+  var score=0;
+  score+=tipScore(u.tipologia);
+  var rg=regOfU(u);
+  if(useReg&&rg&&regs.indexOf(snorm(rg))>=0)score+=20;
+  else if(!useReg)score+=10;
+  if((desl.indexOf('metr')>=0||desl.indexOf('nibus')>=0||desl.indexOf('perto')>=0)&&rg){
+   if(metroZones.indexOf(snorm(rg))>=0)score+=10}
+  scored.push({u:u,score:score})});
+ scored.sort(function(a,b){
+  if(b.score!==a.score)return b.score-a.score;
+  if(prio.indexOf('parcela')>=0)return (a.u.valor_tabela||0)-(b.u.valor_tabela||0);
+  if(prio.indexOf('apartamento')>=0)return (b.u.area_total||0)-(a.u.area_total||0);
+  return (sc[b.u.empreendimento]||0)-(sc[a.u.empreendimento]||0)});
+ var used={},out=[];
+ for(var i=0;i<scored.length&&out.length<6;i++){var item=scored[i];if(!used[item.u.empreendimento]){used[item.u.empreendimento]=1;out.push(item)}}
+ if(!out.length){RECO_LAST=[];box.innerHTML=titulo+'<div class="recohint">'+(elig?'Nenhuma unidade elegível para a renda informada no momento.':'Nenhuma unidade em estoque disponível no momento.')+'</div>';return}
+ var maxScore=out[0]?out[0].score:100;
+ RECO_LAST=out.map(function(item){var u=item.u,pct=Math.min(100,Math.round(item.score/Math.max(maxScore,1)*100));
+  return{empreendimento:u.empreendimento,unidade:u.unidade,tipologia:u.tipologia,categoria:u.categoria,valor_tabela:u.valor_tabela,score:item.score,pct:pct}});
+ box.innerHTML=titulo+'<div class="recogrid">'+out.map(function(item){
+  var u=item.u,rg=regOfU(u),pct=Math.min(100,Math.round(item.score/Math.max(maxScore,1)*100));
+  var badge=pct>=80?'<span class="rcomatch">✓ '+pct+'% compatível</span>':pct>=60?'<span class="rcomatch rcomatch--med">'+pct+'% compatível</span>':'';
+  return '<div class="recocard" data-prod="'+esc(u.empreendimento)+'" data-unid="'+esc(u.unidade)+'"><div class="rc1">'+esc(u.empreendimento)+' '+badge+'</div><div class="rc2">'+esc(u.unidade)+' · '+esc(u.tipologia||'—')+(u.area_total!=null?' · '+String(u.area_total).replace('.',',')+' m²':'')+'</div><div class="rc3">'+(u.valor_tabela!=null?brl(u.valor_tabela):'—')+(rg?' <span class="creg">'+esc(String(rg).toLowerCase())+'</span>':'')+'</div></div>'
+ }).join('')+'</div>'}
+function pickReco(prod,unid){
+ pickEmp(prod);
+ var tries=0,iv=setInterval(function(){ /* espera as unidades do empreendimento carregarem */
+  if(EMP_IDX[prod]){clearInterval(iv);pickUnit(unid);return}
+  if(++tries>66)clearInterval(iv)},150)}
+g('recobox').addEventListener('click',function(e){var it=e.target.closest('.recocard');if(!it)return;pickReco(it.getAttribute('data-prod'),it.getAttribute('data-unid'))});
 
 /* ===== exportação / impressão =====
    1 página só, sem quebra: tabelas e grids compactos (ver CSS .pv-*).
@@ -1575,7 +2038,7 @@ async function salvarProposta(){
   empreendimento:g('empreend').value||null,unidade:g('unidade').value||null,
   tipologia:g('tipologia').value||null,categoria:g('categoria').value||null,
   valor_tabela:cur(g('tab').value)||null,valor_venda:cur(g('venda').value)||null,
-  status:g('status').textContent,dados:snapshotProposta()};
+  status:g('status').textContent,pesquisa_id:window.PESQUISA_ID||null,dados:snapshotProposta()};
  var r=await window.sb.from('propostas').insert(row).select('id,criado_em').single();
  if(r.error)throw r.error;
  return r.data}
