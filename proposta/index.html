@@ -287,6 +287,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
 .pv-pend{background:#FDEDED}
 .pv-note{font-size:9px;color:#888;margin-top:3px;font-style:italic;font-family:-apple-system,sans-serif}
 .pv-warn{background:#FDEDED;border:1px solid #F3B8B8;color:#A32020;padding:7px 10px;border-radius:7px;font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;margin-top:8px}
+/* destaque forte: falta valor pra fechar o fluxo — mostra o cenário alternativo
+   (venda efetiva + desconto embutido) pra decisão ficar óbvia na impressão */
+.pv-falta{background:#FDEDED;border:2px solid #C50F16;border-radius:8px;padding:10px 14px;margin-top:8px;font-family:-apple-system,sans-serif}
+.pv-falta .ft{font-size:11.5px;font-weight:800;color:#A32020;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px}
+.pv-falta .fr{display:flex;gap:18px;flex-wrap:wrap}
+.pv-falta .fr b{font-size:15px;color:#111}
+.pv-falta .fr span{font-size:9px;color:#888;text-transform:uppercase;letter-spacing:.03em;display:block;margin-bottom:1px}
 </style>
 </head>
 <body>
@@ -302,6 +309,20 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
    <div class="row"><label class="lbl">E-mail</label><input class="inp" id="authemail" type="email" autocomplete="username" required></div>
    <div class="row"><label class="lbl">Senha</label><input class="inp" id="authpass" type="password" autocomplete="current-password" required></div>
    <button class="btn red" type="submit" id="authbtn">Entrar</button>
+  </form>
+ </div>
+</div>
+
+<!-- troca de senha obrigatória no 1º acesso -->
+<div class="authgate" id="pwdgate" style="display:none">
+ <div class="authcard">
+  <h1 style="text-align:center">Defina sua senha</h1>
+  <p class="sub" style="text-align:center">Primeiro acesso — escolha uma senha só sua para continuar.</p>
+  <form id="pwdform" onsubmit="return doTrocarSenha(event)">
+   <div class="autherr" id="pwderr"></div>
+   <div class="row"><label class="lbl">Nova senha</label><input class="inp" id="pwdnew" type="password" autocomplete="new-password" minlength="6" required></div>
+   <div class="row"><label class="lbl">Confirmar nova senha</label><input class="inp" id="pwdnew2" type="password" autocomplete="new-password" minlength="6" required></div>
+   <button class="btn red" type="submit" id="pwdbtn">Salvar e entrar</button>
   </form>
  </div>
 </div>
@@ -861,7 +882,13 @@ function calc(){
  chk('entrada',cE,cE?'ENTRADA mínima '+brl(RULES.entradaMin):'ENTRADA abaixo de '+brl(RULES.entradaMin)+' — para o fluxo fechar, a ENTRADA deve ser maior');
  chk('comp',cC,cC?'Comprometimento '+compR.toFixed(1)+'% ≤ '+lim+'%':'Comprometimento '+compR.toFixed(1)+'% acima de '+lim+'%');
  chk('teto',cT,cT?('Valor dentro do teto'+(teto<Infinity?' (R$ '+teto.toLocaleString('pt-BR')+')':' (sem teto)')):'Valor acima do teto (R$ '+teto.toLocaleString('pt-BR')+')');
- chk('fluxo',cF,cF?'Fluxo fecha com o contrato':(falta>0?'Falta '+brl(falta)+' no fluxo':'Fluxo excede em '+brl(-falta)));
+ /* quando falta valor pra fechar: mostra também o cenário alternativo — se esse valor
+    não for cobrado, a venda efetivamente fecha por (venda-falta), o que equivale a um
+    desconto extra de falta/venda sobre o valor negociado. Ajuda a decidir na hora. */
+ var pctFaltaDesc=venda&&falta>0?falta/venda*100:0;
+ chk('fluxo',cF,cF?'Fluxo fecha com o contrato':(falta>0?
+  'Falta '+brl(falta)+' no fluxo — sem esse valor, a venda fecharia em '+brl(venda-falta)+' (desconto de '+pctFaltaDesc.toFixed(1).replace('.',',')+'% sobre o negociado)'
+  :'Fluxo excede em '+brl(-falta)));
  chk('mensais',cM,cM?'Mensais terminam até a entrega':'Há mensais após a data de entrega — não permitido');
  chk('mseq',cMS,cMS?'Sequências mensais sem sobreposição':'Duas sequências "MENSAIS" se sobrepõem no mesmo período — ajuste as datas');
  var posTag=pr.matriz?' · alç '+pr.alcada:'';
@@ -1259,6 +1286,15 @@ g('cv_corretor').addEventListener('input',function(){g('cv_gerente').value='';g(
 
 /* ===== home: minhas propostas ===== */
 function chipStatus(st){var ok=(st||'').indexOf('Pronta')===0;return '<span class="pchip '+(ok?'ok':'no')+'">'+esc(st||'—')+'</span>'}
+/* só o código da unidade: "U-1005 · 24,7 m²" -> "U-1005" */
+function unidCurta(u){if(!u)return'';return String(u).split('·')[0].trim()}
+/* primeiro nome do 1º comprador salvo no snapshot */
+function primeiroNomeProp(p){var b=(p&&p.dados&&p.dados.buyers&&p.dados.buyers[0])||null;
+ if(!b||!b.nome)return'';return String(b.nome).trim().split(/\s+/)[0]}
+/* nome padrão da proposta: EMPREENDIMENTO · U-0000 · Primeiro nome · Nº */
+function tituloProposta(p){
+ return [p.empreendimento||'Sem empreendimento',unidCurta(p.unidade),primeiroNomeProp(p),'Nº '+propostaNum(p)]
+  .filter(Boolean).join(' · ')}
 var PROPS=[];
 async function showHome(){
  g('homegate').style.display='block';
@@ -1270,7 +1306,7 @@ async function showHome(){
   +'<div class="homeempty" style="grid-column:auto">⏳ Carregando…</div>';
  if(!window.sb){grid.innerHTML='<button class="newprop" onclick="novaProposta()"><span class="plus">＋</span>Nova proposta</button>';g('homecount').textContent='';return}
  var r=await window.sb.from('propostas')
-  .select('id,criado_em,empreendimento,unidade,tipologia,valor_venda,status,cadeia_corretor,cadeia_gerente,cadeia_superintendente,cadeia_diretor,dados')
+  .select('id,criado_em,empreendimento,unidade,tipologia,categoria,valor_tabela,valor_venda,status,cadeia_corretor,cadeia_gerente,cadeia_superintendente,cadeia_diretor,dados')
   .eq('criado_por',window.USER_EMAIL).order('criado_em',{ascending:false}).limit(60);
  var html='<button class="newprop" onclick="novaProposta()"><span class="plus">＋</span>Nova proposta</button>';
  if(r.error){
@@ -1282,11 +1318,12 @@ async function showHome(){
   g('homecount').textContent=PROPS.length?PROPS.length+(PROPS.length===1?' proposta':' propostas'):'';
   if(!PROPS.length)html+='<div class="homeempty" style="grid-column:auto">Nenhuma proposta salva ainda.<br>Clique em <b>Nova proposta</b> para começar — ao exportar/imprimir ela é registrada aqui.</div>';
   else html+=PROPS.map(function(p,i){
+   var un=unidCurta(p.unidade),nm=primeiroNomeProp(p);
    return '<div class="propcard" onclick="abrirProposta('+i+')">'
     +'<button class="pdel" onclick="event.stopPropagation();excluirProposta('+i+')" title="Excluir proposta">🗑</button>'
     +'<div class="pnum">Nº '+esc(propostaNum(p))+'</div>'
     +'<div class="pemp">'+esc(p.empreendimento||'— sem empreendimento —')+'</div>'
-    +'<div class="puni">'+esc(p.unidade||'—')+(p.tipologia?' · '+esc(p.tipologia):'')+'</div>'
+    +'<div class="puni">'+[un,nm,p.tipologia].filter(Boolean).map(esc).join(' · ')+'</div>'
     +'<div class="pval">'+(p.valor_venda!=null?brl(p.valor_venda):'—')+'</div>'
     +'<div class="pfoot">'+chipStatus(p.status)
     +'<span class="pdate">'+new Date(p.criado_em).toLocaleDateString('pt-BR')+(p.cadeia_corretor?' · '+esc(p.cadeia_corretor):'')+'</span></div>'
@@ -1342,10 +1379,11 @@ function abrirProposta(i){
  EMPSEL=p.empreendimento||null;
  g('empreend').value=p.empreendimento||'';
  g('unidade').value=p.unidade||'';
- g('tipologia').value=p.tipologia||'';
- g('categoria').value=(d&&d.categoria)||p.categoria||g('categoria').value;
- if(d.area)g('area').value=d.area;
- g('tab').value=p.valor_tabela!=null?brl(p.valor_tabela):'';
+ g('tipologia').value=p.tipologia||d.tipologia||'';
+ g('categoria').value=(d&&d.categoria)||p.categoria||'';
+ g('area').value=d.area||'';
+ /* valor de tabela: prefere a coluna; se não veio, usa o snapshot (dados.tab já formatado) */
+ g('tab').value=p.valor_tabela!=null?brl(p.valor_tabela):(d.tab||'');
  g('desc').value=d.desconto||'0%';
  g('venda').value=p.valor_venda!=null?brl(p.valor_venda):'';
  if(d.entrega)g('entrega').value=d.entrega;
@@ -1418,11 +1456,21 @@ function montarExportHTML(propNum){
   ajusteNota='<div class="pv-note">* diferença de '+nb(diff)+' entre a soma do fluxo e o valor de venda (arredondamento de centavos) ajustada na última parcela para fechamento exato.</div>'
  }
  var fluxRows=fluxRowsArr.map(function(x){return x.html}).join('');
- var somaDivergente=Math.abs(r2(vendaNum-somaCalc))>1;
+ var faltaFinal=r2(vendaNum-somaCalc);
+ var somaDivergente=Math.abs(faltaFinal)>1;
+ var faltouValor=faltaFinal>1; /* fluxo somou MENOS que a venda — falta cobrar algo pra fechar */
+ var pctFaltaFinal=vendaNum?faltaFinal/vendaNum*100:0;
+ var faltaHTML=faltouValor?('<div class="pv-falta"><div class="ft">⚠ Falta valor para fechar o fluxo</div>'
+  +'<div class="fr">'
+  +'<div><span>Falta cobrir</span><b>'+nb(faltaFinal)+'</b></div>'
+  +'<div><span>Se não cobrir, a venda fecha em</span><b>'+nb(somaCalc)+'</b></div>'
+  +'<div><span>Equivale a um desconto de</span><b>'+pctFaltaFinal.toFixed(1).replace('.',',')+'%</b></div>'
+  +'</div></div>'):'';
 
- /* pendências: linhas compactas dentro do setor Resumo */
+ /* pendências: linhas compactas dentro do setor Resumo — chk_fluxo fica de fora quando
+    falta valor, pois já ganha o destaque dedicado (.pv-falta) logo acima, sem repetir */
  var pendHTML=Array.prototype.filter.call(document.querySelectorAll('#chk-card .vrow'),function(r){
-   return r.querySelector('.tick').textContent==='!'
+   return r.querySelector('.tick').textContent==='!'&&!(r.id==='chk_fluxo'&&faltouValor)
   }).map(function(r){return '<div class="pv-pendline">! '+esc(r.querySelector('.lab').textContent.replace(/R\$\s?/g,''))+'</div>'}).join('');
 
  var venda=cur(g('venda').value),psPos=0;
@@ -1479,7 +1527,8 @@ function montarExportHTML(propNum){
  +'<div class="pv-box"><div class="k">Soma do fluxo</div><div class="v">'+nb(somaCalc)+'</div></div>'
  +'<div class="pv-box"><div class="k">Fiador</div><div class="v" style="font-size:11px">'+(temFiador?esc(g('fiador_tipo').value):'SEM FIADOR')+'</div></div>'
  +'</div>'
- +(somaDivergente?'<div class="pv-warn">⚠ A soma do fluxo ('+nb(somaCalc)+') não fecha com o valor de venda ('+nb(vendaNum)+') — diferença de '+nb(Math.abs(r2(vendaNum-somaCalc)))+'. Revise o fluxo antes de enviar.</div>':'')
+ +faltaHTML
+ +(somaDivergente&&!faltouValor?'<div class="pv-warn">⚠ A soma do fluxo ('+nb(somaCalc)+') excede o valor de venda ('+nb(vendaNum)+') em '+nb(Math.abs(faltaFinal))+'. Revise o fluxo antes de enviar.</div>':'')
  +pendHTML
  +parcHTML
 
@@ -1514,6 +1563,7 @@ function snapshotProposta(){
   return{ok:r.querySelector('.tick').textContent!=='!',item:r.querySelector('.lab').textContent}});
  return{buyers:buyers,fluxo:fluxo,checklist:checklist,
   tvenda:g('tvenda').value,sbpe:g('sbpe').checked,area:g('area').value,
+  categoria:g('categoria').value,tipologia:g('tipologia').value,tab:g('tab').value,
   entrega:g('entrega').value,desconto:g('desc').value,d55:g('d55line').textContent,
   parceria:g('parc').checked?{nome:g('parcnome').value,pct:g('c_pa').value,valor:g('comval').value}:null,
   fiador:g('fiador').checked?{tipo:g('fiador_tipo').value,fiadores:fiadoresData()}:null}}
@@ -1538,8 +1588,14 @@ async function exportarProposta(){
  try{var p=await salvarProposta();num=propostaNum(p)}
  catch(e){console.error('erro ao registrar proposta',e);
   alert('Não foi possível registrar a proposta no banco ('+(e.message||e)+').\nEla será impressa como NÃO REGISTRADA.')}
+ /* título da janela = nome do arquivo PDF: EMPREENDIMENTO · U-0000 · Primeiro nome · Nº */
+ var nm=(document.querySelector('.bnome')&&document.querySelector('.bnome').value.trim().split(/\s+/)[0])||'';
+ var titulo=[g('empreend').value,unidCurta(g('unidade').value),nm,num?'Nº '+num:'']
+  .filter(Boolean).join(' · ')||'Proposta';
+ var tituloOrig=document.title;document.title=titulo;
  g('printview').innerHTML=montarExportHTML(num);
- window.print()}
+ window.print();
+ setTimeout(function(){document.title=tituloOrig},400)}
 
 /* ===== boot da calculadora (só roda depois do login confirmado) =====
    tudo nasce limpo — dados da unidade vêm da seleção, fluxo começa vazio */
@@ -1591,6 +1647,7 @@ window.doLogin = doLogin;
 async function doLogout(){
  try { if (sb) await sb.auth.signOut() } catch (e) { console.error('erro ao sair', e) }
  document.getElementById('authgate').style.display = 'flex';
+ document.getElementById('pwdgate').style.display = 'none';
  document.getElementById('topbar').style.display = 'none';
  document.getElementById('page').style.display = 'none';
  document.getElementById('homegate').style.display = 'none';
@@ -1599,12 +1656,48 @@ async function doLogout(){
 }
 window.doLogout = doLogout;
 
-function showApp(session){
+async function showApp(session){
  document.getElementById('authgate').style.display = 'none';
  document.getElementById('userchipmail').textContent = session.user.email;
  window.USER_EMAIL = session.user.email;
+ /* 1º acesso? corretores.senha_trocada = false → força troca antes de entrar.
+    se não houver linha (conta admin/teste), segue direto sem forçar. */
+ try {
+  var q = await sb.from('corretores').select('senha_trocada').ilike('email', session.user.email).limit(1);
+  var linha = q.data && q.data[0];
+  if (linha && linha.senha_trocada === false) {
+   document.getElementById('pwdgate').style.display = 'flex';
+   return;
+  }
+ } catch (e) { console.warn('não foi possível checar senha_trocada', e) }
+ document.getElementById('pwdgate').style.display = 'none';
  window.showHome();
 }
+
+async function doTrocarSenha(ev){
+ ev.preventDefault();
+ var p1 = document.getElementById('pwdnew').value, p2 = document.getElementById('pwdnew2').value;
+ var btn = document.getElementById('pwdbtn'), err = document.getElementById('pwderr');
+ err.classList.remove('on');
+ if (p1.length < 6) { err.textContent = 'A senha precisa ter ao menos 6 caracteres.'; err.classList.add('on'); return false }
+ if (p1 !== p2) { err.textContent = 'As senhas não conferem.'; err.classList.add('on'); return false }
+ btn.disabled = true; btn.textContent = 'Salvando...';
+ try {
+  var up = await sb.auth.updateUser({ password: p1 });
+  if (up.error) { err.textContent = 'Não foi possível trocar a senha: ' + up.error.message; err.classList.add('on'); return false }
+  var rpc = await sb.rpc('marcar_senha_trocada');
+  if (rpc.error) { console.warn('falha ao marcar senha_trocada', rpc.error) } /* senha já trocada; segue mesmo assim */
+  document.getElementById('pwdnew').value = ''; document.getElementById('pwdnew2').value = '';
+  document.getElementById('pwdgate').style.display = 'none';
+  window.showHome();
+ } catch (e) {
+  err.textContent = 'Erro ao salvar: ' + e.message; err.classList.add('on');
+ } finally {
+  btn.disabled = false; btn.textContent = 'Salvar e entrar';
+ }
+ return false;
+}
+window.doTrocarSenha = doTrocarSenha;
 
 async function initAuth(){
  if (!configurado) { showSetupNotice(); return }
