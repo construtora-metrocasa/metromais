@@ -240,7 +240,7 @@
       <div class="card-body">
         <h1>Sem painel vinculado</h1>
         <p class="lead">Seu acesso funcionou, porém ainda não existe um painel configurado para o seu usuário. Fale com o RH/Comercial.</p>
-        <button class="btn" type="button" id="btnVerPerformanceSemAcesso">Ver Estoque</button>
+        <button class="btn" type="button" id="btnVerPerformanceSemAcesso">Ver Performance Comercial</button>
         <a href="#" class="link-secundario" id="linkSairSemAcesso">Sair</a>
       </div>
     </div>
@@ -249,7 +249,7 @@
   <!-- TELA: DASHBOARD (iframe em tela cheia, nunca navega pra outra URL) -->
   <div id="viewDashboard" hidden>
     <div class="botoesPainel">
-      <button class="botaoAlt" id="btnAlternarPainel">Estoque</button>
+      <button class="botaoAlt" id="btnAlternarPainel">Performance Comercial</button>
       <button class="botaoSair" id="btnSairDashboard">Sair</button>
     </div>
     <iframe id="iframeDashboard" title="Painel"></iframe>
@@ -278,6 +278,15 @@ const telas = {
 let paginaPropria = null;    // pagina_acesso da pessoa logada (ou null se não tiver)
 let mostrandoPerformance = false;
 
+// E-mails que veem o painel "limpo" — sem os botões do canto (Performance
+// Comercial / Sair). Comparação sempre em minúsculo.
+const EMAILS_SEM_BOTOES = ['fernando@metrocasa.com.br'];
+
+function aplicarRestricoesPainel(email) {
+  const esconder = EMAILS_SEM_BOTOES.includes(String(email || '').trim().toLowerCase());
+  document.querySelector('.botoesPainel').hidden = esconder;
+}
+
 function mostrarTela(nome) {
   Object.keys(telas).forEach((chave) => {
     telas[chave].hidden = (chave !== nome);
@@ -286,7 +295,7 @@ function mostrarTela(nome) {
 
 function atualizarBotaoAlternar() {
   const btn = document.getElementById('btnAlternarPainel');
-  btn.textContent = mostrandoPerformance ? 'Meu painel' : 'Estoque';
+  btn.textContent = mostrandoPerformance ? 'Meu painel' : 'Performance Comercial';
 }
 
 function abrirPerformanceComercial() {
@@ -313,7 +322,9 @@ function alternarPainel() {
   atualizarBotaoAlternar();
 }
 
-async function carregarPerfilEDirecionar(userId) {
+async function carregarPerfilEDirecionar(userId, email) {
+  aplicarRestricoesPainel(email);
+
   const { data: perfil, error } = await supabase
     .from('funcionarios')
     .select('pagina_acesso, senha_trocada')
@@ -359,7 +370,7 @@ async function sair() {
 // Se já existir sessão salva (login anterior), pula direto pro painel.
 supabase.auth.getSession().then(({ data }) => {
   if (data.session) {
-    carregarPerfilEDirecionar(data.session.user.id);
+    carregarPerfilEDirecionar(data.session.user.id, data.session.user.email);
   }
 });
 
@@ -381,7 +392,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       msg.textContent = 'E-mail ou senha inválidos, ou acesso bloqueado.';
       return;
     }
-    await carregarPerfilEDirecionar(data.user.id);
+    await carregarPerfilEDirecionar(data.user.id, data.user.email);
   } catch (err) {
     msg.textContent = 'Erro ao conectar. Tente novamente.';
     console.error(err);
@@ -432,7 +443,7 @@ document.getElementById('trocaForm').addEventListener('submit', async (e) => {
     msg.classList.add('ok');
 
     const { data: { user } } = await supabase.auth.getUser();
-    await carregarPerfilEDirecionar(user.id);
+    await carregarPerfilEDirecionar(user.id, user.email);
   } catch (err) {
     msg.textContent = 'Erro ao conectar. Tente novamente.';
     console.error(err);
@@ -447,7 +458,7 @@ document.getElementById('linkSairTroca').addEventListener('click', (e) => { e.pr
 document.getElementById('linkSairSemAcesso').addEventListener('click', (e) => { e.preventDefault(); sair(); });
 document.getElementById('btnSairDashboard').addEventListener('click', () => { sair(); });
 
-// ---- Estoque (disponível pra todo mundo logado) ----
+// ---- Performance Comercial (disponível pra todo mundo logado) ----
 document.getElementById('btnAlternarPainel').addEventListener('click', () => { alternarPainel(); });
 document.getElementById('btnVerPerformanceSemAcesso').addEventListener('click', () => { abrirPerformanceComercial(); });
 </script>
