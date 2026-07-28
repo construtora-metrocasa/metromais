@@ -354,7 +354,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
 .pv-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-family:-apple-system,sans-serif}
 .pv-grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;font-family:-apple-system,sans-serif}
 .pv-grid5{display:grid;grid-template-columns:1.3fr 1fr 1fr .9fr .9fr;gap:8px;font-family:-apple-system,sans-serif}
-.pv-pendline{font-family:-apple-system,sans-serif;font-size:10.5px;font-weight:700;color:#A32020;background:#FDEDED;border-radius:5px;padding:4px 9px;margin-top:4px}
+.pv-pendline{font-family:-apple-system,sans-serif;font-size:12px;font-weight:800;color:#8E1B1B;background:#FBE0E0;border:1.5px solid #C50F16;border-left:6px solid #C50F16;border-radius:6px;padding:7px 11px;margin-top:6px;display:flex;align-items:center;gap:8px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.pv-bang{flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#C50F16;color:#fff;font-weight:900;font-size:12px;line-height:1;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .pv-box{background:#F7F5F2;border-radius:7px;padding:6px 9px}
 .pv-box .k{font-size:8.5px;text-transform:uppercase;color:#888;margin-bottom:2px}
 .pv-box .v{font-size:12.5px;font-weight:800}
@@ -369,10 +370,10 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
 .pv-pend td{color:#A32020;font-weight:700}
 .pv-pend{background:#FDEDED}
 .pv-note{font-size:9px;color:#888;margin-top:3px;font-style:italic;font-family:-apple-system,sans-serif}
-.pv-warn{background:#FDEDED;border:1px solid #F3B8B8;color:#A32020;padding:7px 10px;border-radius:7px;font-family:-apple-system,sans-serif;font-size:11px;font-weight:700;margin-top:8px}
+.pv-warn{background:#FBE0E0;border:1.5px solid #C50F16;border-left:6px solid #C50F16;color:#8E1B1B;padding:9px 12px;border-radius:7px;font-family:-apple-system,sans-serif;font-size:12px;font-weight:800;margin-top:8px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 /* destaque forte: falta valor pra fechar o fluxo — mostra o cenário alternativo
    (venda efetiva + desconto embutido) pra decisão ficar óbvia na impressão */
-.pv-falta{background:#FDEDED;border:2px solid #C50F16;border-radius:8px;padding:10px 14px;margin-top:8px;font-family:-apple-system,sans-serif}
+.pv-falta{background:#FBE0E0;border:2.5px solid #C50F16;border-radius:8px;padding:10px 14px;margin-top:8px;font-family:-apple-system,sans-serif;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .pv-falta .ft{font-size:11.5px;font-weight:800;color:#A32020;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px}
 .pv-falta .fr{display:flex;gap:18px;flex-wrap:wrap}
 .pv-falta .fr b{font-size:15px;color:#111}
@@ -505,6 +506,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
      <div><label class="lbl">Forma de venda</label><select class="inp" id="tvenda" onchange="onTvenda()">
        <option value="CEF">Financiado CEF</option><option value="DIRETO">Direto c/ construtora</option><option value="À VISTA">À vista</option></select></div>
     </div>
+    <div class="grid3 row">
+     <div><label class="lbl">Piso / Documentação</label><select class="inp" id="entregacond" onchange="calc()">
+       <option value="">—</option>
+       <option>PISO + DOC</option>
+       <option>PISO + 50% DA DOC</option>
+       <option>DOC</option></select></div>
+    </div>
    </div>
 
    <div class="card">
@@ -575,12 +583,14 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
      <label class="lbl" id="complbl">Comprometimento</label>
      <div class="bar"><i id="compbar" style="width:0%"></i></div>
     </div>
+    <div class="obracard" id="evobrabox" style="display:none;margin-top:14px"></div>
     <div id="neg"></div>
    </div>
 
    <div class="card collapsed" id="chk-card">
     <h2>Checklist</h2>
     <div class="chkoksum" id="chkoksum" onclick="toggleChkOk()">— <u>ver todas</u></div>
+    <div class="vrow" id="chk_buyers"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_renda"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_entrada"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_comp"><span class="tick">✓</span><span class="lab">—</span></div>
@@ -589,6 +599,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
     <div class="vrow" id="chk_mensais"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_mseq"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_pos"><span class="tick">✓</span><span class="lab">—</span></div>
+    <div class="vrow" id="chk_fiador"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_posdt"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_ano"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_forma"><span class="tick">✓</span><span class="lab">—</span></div>
@@ -615,6 +626,7 @@ var RULES_DEFAULT={
  v:1, rendaMin:2000, entradaMin:500,
  compCorte:4500, compAbaixo:15, compAcima:20,
  posPctRenda:10, anuMultBase:100, anuMultFgts:150,
+ evTr:0.18, evSeguro:23.48, evAdm:25, /* Evolução de Obra: TR%/mês, seguro e taxa adm fixos (R$/mês) */
  garMinPct:0, preM2Min:0, /* mínimos do alerta D55 (0 = sem regra) */
  teto:{'HIS-1':276102.20,'HIS-2':382636.74,'HMP':537672.71},
  pos:{studio:{pct:20,meses:48},um:{pct:20,meses:48},office:{pct:20,meses:60},resto:{pct:25,meses:60}}
@@ -769,10 +781,46 @@ function rendaSplit(){var f=0,inf=0;
 /* taxa de relacionamento por faixa de renda — só informativa, fora do fluxo */
 function taxaRel(r){if(r<1400)return null;if(r<2000)return 650;if(r<=4400)return 750;if(r<=6500)return 850;return 950}
 /* fiador: 1 FIADOR · 2 FIADORES · 1 FIADOR CHAVES — um bloco de dados por fiador */
-function toggleFiador(){var on=g('fiador').checked;g('fiadorbox').style.display=on?'block':'none';if(on)renderFiadores()}
+function toggleFiador(){var on=g('fiador').checked;g('fiadorbox').style.display=on?'block':'none';if(on)renderFiadores();calc()}
 function fiadoresData(){return [].map.call(document.querySelectorAll('#fiadores .fiador-blk'),function(b){
  return{nome:b.querySelector('.fnome').value,cpf:b.querySelector('.fcpf').value,
   renda:cur(b.querySelector('.frenda').value),grau:b.querySelector('.fgrau').value}})}
+/* validação: cada comprador com TODOS os campos preenchidos + CPF válido.
+   (renda informal é o único opcional — pode ser zero legitimamente) */
+function buyersOk(){
+ var buyers=document.querySelectorAll('#buyers .buyer');
+ if(!buyers.length)return{ok:false,msg:'Adicione ao menos um comprador e preencha os dados'};
+ var campos=[['bnome','Nome'],['bcpf','CPF'],['bidade','Idade'],['becivil','Estado civil'],
+  ['bprof','Profissão'],['brenda','Renda formal'],['bfsocial','Fator social'],
+  ['bspc','SPC'],['bsicaq','SICAQ'],['bpimovel','1º imóvel'],['bfgts','FGTS']];
+ var falhas=[];
+ [].forEach.call(buyers,function(b,i){
+  var faltas=[];
+  campos.forEach(function(c){var el=b.querySelector('.'+c[0]);var v=el?String(el.value||'').trim():'';if(!v)faltas.push(c[1])});
+  var cpfEl=b.querySelector('.bcpf'),cpfV=cpfEl?String(cpfEl.value||'').trim():'';
+  if(cpfV&&!validCPF(cpfV)&&faltas.indexOf('CPF')<0)faltas.push('CPF inválido');
+  if(faltas.length)falhas.push('Comprador '+(i+1)+': '+faltas.join(', '));
+ });
+ return falhas.length?{ok:false,msg:falhas.join(' · ')}:{ok:true,msg:'Compradores completos ('+buyers.length+')'};
+}
+/* validação: se houver parcelas PÓS-CHAVES, o fiador é obrigatório e completo */
+function fiadorOk(psPos){
+ if(psPos<=0)return{ok:true,msg:'Sem pós-chaves — fiador não exigido'};
+ if(!g('fiador').checked)return{ok:false,msg:'Há pós-chaves — marque "Termo de fiador" e preencha os dados'};
+ var blks=document.querySelectorAll('#fiadores .fiador-blk');
+ if(!blks.length)return{ok:false,msg:'Há pós-chaves — preencha os dados do fiador'};
+ var falhas=[];
+ [].forEach.call(blks,function(b,i){
+  var f=[];
+  if(!String(b.querySelector('.fnome').value||'').trim())f.push('Nome');
+  var cpf=String(b.querySelector('.fcpf').value||'').trim();
+  if(!cpf)f.push('CPF');else if(!validCPF(cpf))f.push('CPF inválido');
+  if(!cur(b.querySelector('.frenda').value))f.push('Renda');
+  if(!String(b.querySelector('.fgrau').value||'').trim())f.push('Grau');
+  if(f.length)falhas.push((blks.length>1?'Fiador '+(i+1)+': ':'')+f.join(', '));
+ });
+ return falhas.length?{ok:false,msg:'Fiador exigido (há pós-chaves) — '+falhas.join(' · ')}:{ok:true,msg:'Fiador preenchido (exigido por pós-chaves)'};
+}
 function renderFiadores(dados){
  var n=g('fiador_tipo').value==='2 FIADORES'?2:1,old=dados||fiadoresData(),html='';
  for(var i=0;i<n;i++){var d=old[i]||{};
@@ -785,7 +833,10 @@ function renderFiadores(dados){
    +'<div><label class="lbl">Grau de parentesco</label><input class="inp fgrau" value="'+esc(d.grau||'')+'" placeholder="Ex: pai, irmã"></div>'
    +'</div></div>'}
  g('fiadores').innerHTML=html}
-g('fiadores').addEventListener('input',function(e){if(e.target.classList.contains('fcpf'))e.target.value=maskCPF(e.target.value)});
+g('fiadores').addEventListener('input',function(e){if(e.target.classList.contains('fcpf'))e.target.value=maskCPF(e.target.value);calc()});
+g('fiadores').addEventListener('change',function(){calc()});
+g('fiadores').addEventListener('focusout',function(e){
+ if(e.target.classList.contains('fcpf')){var v=e.target.value;e.target.classList.toggle('invalid',!(!v||validCPF(v)))}});
 g('buyers').addEventListener('input',function(e){
  if(e.target.classList.contains('bcpf')){e.target.value=maskCPF(e.target.value)}
  calc()});
@@ -968,7 +1019,9 @@ function calc(){
  if(RR.aprovacao&&RR.motivo)aprovMotivos.push(RR.motivo);
  var sujeito=aprovMotivos.length>0;
  var posDtMsgs=posDtBad.filter(function(m,i){return posDtBad.indexOf(m)===i}),cPosDt=posDtMsgs.length===0;
- var ok=cR&&cE&&cC&&cT&&cF&&cM&&cMS&&cPos&&cPosDt&&cAno&&cForma&&cGar&&cM2p&&cVgv;
+ var vB=buyersOk(),cBuyers=vB.ok;
+ var vFi=fiadorOk(psPos),cFiador=vFi.ok;
+ var ok=cR&&cE&&cC&&cT&&cF&&cM&&cMS&&cPos&&cPosDt&&cAno&&cForma&&cGar&&cM2p&&cVgv&&cBuyers&&cFiador;
  chk('renda',cR,cR?'Renda mínima '+brl(RULES.rendaMin):'Renda abaixo de '+brl(RULES.rendaMin)+' — só 100% financiado');
  chk('entrada',cE,cE?'ENTRADA mínima '+brl(RULES.entradaMin):'ENTRADA abaixo de '+brl(RULES.entradaMin)+' — para o fluxo fechar, a ENTRADA deve ser maior');
  chk('comp',cC,cC?'Comprometimento '+compR.toFixed(1)+'% ≤ '+lim+'%':'Comprometimento '+compR.toFixed(1)+'% acima de '+lim+'%');
@@ -992,6 +1045,8 @@ function calc(){
  chk('m2pre',cM2p,RR.row?(cM2p?'M² PRÉ-CHAVES: OK — '+brl(m2PreV)+'/m² ≥ mín '+brl(RR.row.m2_prechaves_ok)+'/m²'+alcTag:'M² PRÉ-CHAVES: ABAIXO — '+brl(m2PreV)+'/m² < mín '+brl(RR.row.m2_prechaves_ok)+'/m²'+alcTag):(RULES.preM2Min>0?(cM2p?'M² PRÉ-CHAVES: OK — '+brl(m2PreV)+'/m² ≥ mínimo '+brl(RULES.preM2Min):'M² PRÉ-CHAVES: ABAIXO — '+brl(m2PreV)+'/m² < mínimo '+brl(RULES.preM2Min)):'Pré-chaves '+(m2PreV>0?brl(m2PreV)+'/m²':'—')+' (sem matriz — mínimo nas regras ⚙)'));
  chk('posdt',cPosDt,cPosDt?'Datas das parcelas pós dentro das regras (após entrega · 10/dez · 10/jun)':posDtMsgs.join(' · '));
  chk('aprov',!sujeito,sujeito?'SUJEITO A APROVAÇÃO — '+aprovMotivos.join(' · '):'Fluxo padrão CEF — sem aprovação especial');
+ chk('buyers',cBuyers,vB.msg);
+ chk('fiador',cFiador,vFi.msg);
  /* linha de indicadores (espelho do selo D55 da planilha CALCULO PROPOSTA) */
  var dl=g('d55line');
  if(dl){var todosOk=cVgv&&cGar&&cM2p;
@@ -1014,6 +1069,14 @@ function calc(){
  if(_sum)_sum.innerHTML='✓ '+_oks+' verificaç'+(_oks===1?'ão':'ões')+' em dia'
   +(_fails?' · <span style="color:var(--red-d)">'+_fails+' pendente'+(_fails>1?'s':'')+'</span>':'')
   +' <u>'+(g('chk-card').classList.contains('collapsed')?'ver todas':'ocultar ok')+'</u>';
+ var evEl=g('evobrabox');
+ if(evEl){var er=SEL_UNIT?evObraRange(g('empreend').value,renda,fluxFinCEF(),SEL_UNIT.terreno):null;
+  if(er){evEl.style.display='block';
+   evEl.innerHTML='<b>Evolução de obra</b> · juros de obra na construção ('+er.n+' meses)<br>'
+    +'1ª parcela <b>'+brl(er.min)+'</b> <span style="color:var(--mut-lt)">('+mesAno_(er.ini)+')</span> · '
+    +'última <b>'+brl(er.max)+'</b> <span style="color:var(--mut-lt)">('+mesAno_(er.fim)+')</span><br>'
+    +'<span style="color:var(--mut);font-weight:600;font-size:11px">'+(er.real?'com base no FINANC. CEF do fluxo':'estimativa pela renda')+'</span>';
+  }else{evEl.style.display='none';evEl.innerHTML=''}}
  calcCom();
  advise()}
 function toggleChkOk(){g('chk-card').classList.toggle('collapsed');calc()}
@@ -1203,6 +1266,25 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')toggleRulesP
 /* ===== base remota (Supabase): combos de empreendimento/unidade ===== */
 var EMP_IDX={},OBRAS_IDX={},EMPLIST=[],EMPSEL=null;
 function normTxt(x){return (x==null?'':''+x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+/* ===== Evolu\u00e7\u00e3o de Obra (portado do Proposta+): cronograma f\u00edsico-financeiro + terreno ===== */
+var EVOBRA_SCHEDULE={},SEL_UNIT=null;
+function snorm(x){return (x==null?'':''+x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase()}
+function mesAno_(iso){var p=(''+(iso||'')).split('-');return p.length>=2?p[1]+'/'+p[0]:(iso||'')}
+/* soma o valor REAL das linhas FINANC. CEF do fluxo (como no Excel EV.OBRA!C10) */
+function fluxFinCEF(){var t=0;document.querySelectorAll('#flux .prow').forEach(function(r){if(r.querySelector('.ptipo').value==='FINANC. CEF'){var q=parseInt(r.querySelector('.pqtd').value)||1,v=cur(r.querySelector('.pvalor').value);t+=q*v}});return t}
+/* faixa de parcela da evolu\u00e7\u00e3o de obra (juros de obra durante a constru\u00e7\u00e3o).
+   saldo m\u00eas = financObra \u00d7 %acumulado + terreno; parcela = saldo\u00d7(taxa/12) + saldo\u00d7TR% + seguro + adm */
+function evObraRange(prod,renda,financReal,terreno){
+ var sched=EVOBRA_SCHEDULE[snorm(prod)];
+ if(!sched||!sched.length||terreno==null||!renda)return null;
+ var f=finLookup(renda);if(!f)return null;
+ var financTotal=(financReal>0)?financReal:(f.maxCom||0);
+ if(!financTotal)return null;
+ var evTr=(RULES.evTr!=null?+RULES.evTr:0.18),evSeg=(RULES.evSeguro!=null?+RULES.evSeguro:23.48),evAdm=(RULES.evAdm!=null?+RULES.evAdm:25);
+ var financObra=Math.max(0,financTotal-terreno),taxaMes=(f.taxa||0)/100/12,acumP=0,vals=[];
+ sched.forEach(function(m){acumP+=m.pct;var saldo=financObra*acumP+terreno;
+  vals.push(saldo*taxaMes+saldo*(evTr/100)+evSeg+evAdm)});
+ return{min:Math.min.apply(null,vals),max:Math.max.apply(null,vals),n:vals.length,real:financReal>0,ini:sched[0].periodo,fim:sched[sched.length-1].periodo}}
 async function fetchAll_(tbl,cols,ord){
  var out=[],page=1000,from=0;
  while(true){
@@ -1244,6 +1326,12 @@ async function carregarDadosRemotos(){
   /* regiões p/ o assistente (consulta separada e tolerante: se a coluna não existir, segue sem) */
   try{var rgs=await fetchAll_('obras_andamento','empreendimento,regiao',['empreendimento']);
    rgs.forEach(function(x){if(OBRAS_IDX[x.empreendimento])OBRAS_IDX[x.empreendimento].regiao=x.regiao||''})}catch(e){}
+  /* cronograma de obra (Evolução de Obra) — tolerante: sem a tabela, segue sem o cálculo */
+  try{var sched=await fetchAll_('evobra_schedule','empreendimento,periodo,pct',['empreendimento']);
+   EVOBRA_SCHEDULE={};sched.forEach(function(r){(EVOBRA_SCHEDULE[r.empreendimento]=EVOBRA_SCHEDULE[r.empreendimento]||[]).push({periodo:r.periodo,pct:+r.pct})});
+   Object.keys(EVOBRA_SCHEDULE).forEach(function(k){EVOBRA_SCHEDULE[k].sort(function(a,b){return a.periodo<b.periodo?-1:1})});
+   console.log('cronograma de obra:',sched.length,'linhas /',Object.keys(EVOBRA_SCHEDULE).length,'empreendimentos');
+  }catch(e){console.warn('evobra_schedule indisponível',e&&e.message)}
  }catch(e){
   console.error('falha ao carregar dados remotos',e);
   if(hint)hint.textContent='⚠ Não foi possível carregar a base. Preencha os campos manualmente.';
@@ -1266,6 +1354,13 @@ async function carregarUnidades(prod){
    from+=page;
   }
   EMP_IDX[prod]=out;
+  /* terreno por unidade (Evolução de Obra) — tolerante: sem a tabela, segue sem */
+  try{var tmap={},tf=0;
+   while(true){var tr=await window.sb.from('terreno_unidade').select('unidade,terreno').eq('empreendimento',snorm(prod)).range(tf,tf+999);
+    if(tr.error)break;(tr.data||[]).forEach(function(x){tmap[x.unidade]=x.terreno});
+    if(!tr.data||tr.data.length<1000)break;tf+=1000}
+   out.forEach(function(u){if(tmap[u.unidade]!=null)u.terreno=+tmap[u.unidade]});
+  }catch(e){}
  }catch(e){console.error('falha ao carregar unidades de '+prod,e)}
  UNITS_LOADING[prod]=false;
  /* se a lista de unidades está aberta nesse empreendimento, atualiza na hora */
@@ -1317,6 +1412,7 @@ function pickEmp(prod){
 }
 function pickUnit(un){
  var u=(EMP_IDX[EMPSEL]||[]).find(function(x){return x.unidade===un});if(!u)return;
+ SEL_UNIT=u;
  g('unidade').value=u.unidade+(u.area_total!=null?' · '+String(u.area_total).replace('.',',')+' m²':'');
  g('unid_list').style.display='none';
  if(u.area_total!=null)g('area').value=u.area_total;
@@ -1446,12 +1542,12 @@ function entrarNoMotor(){
 function novaProposta(){window.PESQUISA_ID=null;entrarNoMotor();if(window.__usedOnce)resetForm();window.__usedOnce=true}
 function voltarHome(){showHome()}
 function resetForm(){
- window.PESQUISA_ID=null;
+ window.PESQUISA_ID=null;SEL_UNIT=null;
  g('buyers').innerHTML='';addBuyer();
  g('flux').innerHTML='';
  EMPSEL=null;g('empreend').value='';g('unidade').value='';renderObra(null);
  g('categoria').value='';g('tipologia').value='';g('area').value='';g('tab').value='';
- g('desc').value='0%';g('venda').value='';g('entrega').value='';g('tvenda').value='CEF';
+ g('desc').value='0%';g('venda').value='';g('entrega').value='';g('tvenda').value='CEF';g('entregacond').value='';
  g('sbpe').checked=false;g('fiador').checked=false;g('fiadorbox').style.display='none';
  g('fiador_tipo').value='1 FIADOR';g('fiadores').innerHTML='';
  g('parc').checked=false;g('parcbox').style.display='none';g('parcnome').value='';g('c_pa').value='';g('comval').value='';
@@ -1488,6 +1584,7 @@ function abrirProposta(i){
  g('venda').value=p.valor_venda!=null?brl(p.valor_venda):'';
  if(d.entrega)g('entrega').value=d.entrega;
  if(d.tvenda)g('tvenda').value=d.tvenda;
+ if(d.entregacond)g('entregacond').value=d.entregacond;
  g('sbpe').checked=!!d.sbpe;
  if(EMPSEL&&OBRAS_IDX[EMPSEL])renderObra(OBRAS_IDX[EMPSEL]);
  /* fluxo */
@@ -1934,7 +2031,7 @@ function montarExportHTML(propNum){
     falta valor, pois já ganha o destaque dedicado (.pv-falta) logo acima, sem repetir */
  var pendHTML=Array.prototype.filter.call(document.querySelectorAll('#chk-card .vrow'),function(r){
    return r.querySelector('.tick').textContent==='!'&&!(r.id==='chk_fluxo'&&faltouValor)
-  }).map(function(r){return '<div class="pv-pendline">! '+esc(r.querySelector('.lab').textContent.replace(/R\$\s?/g,''))+'</div>'}).join('');
+  }).map(function(r){return '<div class="pv-pendline"><span class="pv-bang">!</span>'+esc(r.querySelector('.lab').textContent.replace(/R\$\s?/g,''))+'</div>'}).join('');
 
  var venda=cur(g('venda').value),psPos=0;
  document.querySelectorAll('#flux .prow').forEach(function(r){
@@ -1973,6 +2070,7 @@ function montarExportHTML(propNum){
  +'<div class="pv-box"><div class="k">Categoria de uso</div><div class="v" style="font-size:11.5px">'+esc(g('categoria').value||'—')+'</div></div>'
  +'<div class="pv-box"><div class="k">Data de entrega</div><div class="v" style="font-size:11.5px">'+(g('entrega').value?dfull(parseISO(g('entrega').value)):'—')+'</div></div>'
  +'</div>'
+ +(g('entregacond').value?'<div class="pv-note" style="font-style:normal;font-size:10px;color:#555;margin-top:6px"><b>Piso / Documentação:</b> '+esc(g('entregacond').value)+'</div>':'')
 
  /* setor 2 — resumo: valores, parâmetros e o que está fora */
  +'<div class="pv-h2">Resumo</div>'
@@ -1990,6 +2088,8 @@ function montarExportHTML(propNum){
  +'<div class="pv-box"><div class="k">Soma do fluxo</div><div class="v">'+nb(somaCalc)+'</div></div>'
  +'<div class="pv-box"><div class="k">Fiador</div><div class="v" style="font-size:11px">'+(temFiador?esc(g('fiador_tipo').value):'SEM FIADOR')+'</div></div>'
  +'</div>'
+ +(function(){var er=SEL_UNIT?evObraRange(g('empreend').value,rendaTot(),fluxFinCEF(),SEL_UNIT.terreno):null;
+   return er?'<div class="pv-note" style="font-style:normal;font-size:10px;color:#555;margin-top:6px"><b>Evolução de obra ('+er.n+' meses):</b> 1ª parcela '+nb(er.min)+' ('+mesAno_(er.ini)+') · última '+nb(er.max)+' ('+mesAno_(er.fim)+')</div>':''})()
  +faltaHTML
  +(somaDivergente&&!faltouValor?'<div class="pv-warn">⚠ A soma do fluxo ('+nb(somaCalc)+') excede o valor de venda ('+nb(vendaNum)+') em '+nb(Math.abs(faltaFinal))+'. Revise o fluxo antes de enviar.</div>':'')
  +pendHTML
@@ -2027,7 +2127,7 @@ function snapshotProposta(){
  return{buyers:buyers,fluxo:fluxo,checklist:checklist,
   tvenda:g('tvenda').value,sbpe:g('sbpe').checked,area:g('area').value,
   categoria:g('categoria').value,tipologia:g('tipologia').value,tab:g('tab').value,
-  entrega:g('entrega').value,desconto:g('desc').value,d55:g('d55line').textContent,
+  entrega:g('entrega').value,desconto:g('desc').value,d55:g('d55line').textContent,entregacond:g('entregacond').value,
   parceria:g('parc').checked?{nome:g('parcnome').value,pct:g('c_pa').value,valor:g('comval').value}:null,
   fiador:g('fiador').checked?{tipo:g('fiador_tipo').value,fiadores:fiadoresData()}:null}}
 async function salvarProposta(){
