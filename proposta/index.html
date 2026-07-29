@@ -472,7 +472,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
      <label class="lbl">Renda total</label>
      <div class="metric"><div class="v" id="rendatot">R$ 0</div></div>
     </div>
-    <div class="chkline"><input type="checkbox" id="sbpe" onchange="calc()"><span>Já possui imóvel financiado (SBPE) — não recebe subsídio</span></div>
+    <div class="chkline"><input type="checkbox" id="sbpe" onchange="onSbpe()"><span>Já possui imóvel financiado (SBPE) — não recebe subsídio</span></div>
     <div class="chkline"><input type="checkbox" id="fiador" onchange="toggleFiador()"><span>Termo de fiador</span></div>
     <div id="fiadorbox" style="display:none;margin-top:8px">
      <div style="max-width:240px"><label class="lbl">Tipo</label><select class="inp" id="fiador_tipo" onchange="renderFiadores()">
@@ -529,6 +529,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
     <div id="flux"></div>
     <div class="fluxfoot">
      <span class="addlink" onclick="addParcela()">＋ adicionar parcela</span>
+     <span class="addlink" id="btnAcrCEF" onclick="aplicarMensObrig();calc()" style="display:none">＋ aplicar 2 primeiras obrigatórias (CEF)</span>
      <span class="linkmut" onclick="limparFlux()">✕ limpar tudo</span>
     </div>
    </div>
@@ -601,6 +602,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Hel
     <div class="vrow" id="chk_pos"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_fiador"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_posdt"><span class="tick">✓</span><span class="lab">—</span></div>
+    <div class="vrow" id="chk_datas"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_ano"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_forma"><span class="tick">✓</span><span class="lab">—</span></div>
     <div class="vrow" id="chk_vgvm2"><span class="tick">✓</span><span class="lab">—</span></div>
@@ -627,6 +629,7 @@ var RULES_DEFAULT={
  compCorte:4500, compAbaixo:15, compAcima:20,
  posPctRenda:10, anuMultBase:100, anuMultFgts:150,
  evTr:0.18, evSeguro:23.48, evAdm:25, /* Evolução de Obra: TR%/mês, seguro e taxa adm fixos (R$/mês) */
+ mensalAcresc:250, /* acréscimo fixo nas 2 primeiras parcelas MENSAIS — só venda CEF */
  garMinPct:0, preM2Min:0, /* mínimos do alerta D55 (0 = sem regra) */
  teto:{'HIS-1':276102.20,'HIS-2':382636.74,'HMP':537672.71},
  pos:{studio:{pct:20,meses:48},um:{pct:20,meses:48},office:{pct:20,meses:60},resto:{pct:25,meses:60}}
@@ -712,6 +715,8 @@ function mesLab(iso){if(!iso)return'—';var p=String(iso).split('-');if(p.lengt
    MENSAIS: dia 10 seguinte à data-base · ANUAIS: sempre 10 de dezembro ·
    ÚNICA: 10 de junho do último ano do projeto, ou o dia 10 anterior à entrega */
 function nextDay10(from){var c=new Date(from.getFullYear(),from.getMonth(),10);if(c<=from)c=new Date(from.getFullYear(),from.getMonth()+1,10);return c}
+/* regra de data das mensais: se hoje for dia 21 ou depois, o início anda +1 mês */
+function mensalStartDate(){var c=nextDay10(TODAY);if(TODAY.getDate()>=21)c=new Date(c.getFullYear(),c.getMonth()+1,10);return c}
 function nextDec10(from){var c=new Date(from.getFullYear(),11,10);if(c<=from)c=new Date(from.getFullYear()+1,11,10);return c}
 function decsEntre(from,to){var n=0,c=nextDec10(from);while(c<=to&&n<40){n++;c=new Date(c.getFullYear()+1,11,10)}return n}
 function unicaDate(entrega){
@@ -840,7 +845,7 @@ g('fiadores').addEventListener('focusout',function(e){
 g('buyers').addEventListener('input',function(e){
  if(e.target.classList.contains('bcpf')){e.target.value=maskCPF(e.target.value)}
  calc()});
-g('buyers').addEventListener('change',function(){calc()});
+g('buyers').addEventListener('change',function(){atualizarMensObrig();calc()});
 g('buyers').addEventListener('focusout',function(e){
  if(e.target.classList.contains('bcpf')){var v=e.target.value,ok=!v||validCPF(v);e.target.classList.toggle('invalid',!ok);var err=e.target.parentElement.querySelector('.field-err');if(err)err.classList.toggle('on',!ok)}});
 /* máscara de moeda ao vivo em qualquer campo .money: digita 350000 → R$ 350.000;
@@ -877,6 +882,7 @@ function onTvenda(){
   if(compRow){compRow.querySelector('.pqtd').value=1;compRow.querySelector('.pvalor').value=restante?brl(restante):''}
   else buildRow('COMP. ENTRADA',1,restante,isoOf(TODAY));
  }
+ if(g('tvenda').value==='CEF')aplicarMensObrig();else removerMensObrig(); /* CEF trava as 2 primeiras; fora do CEF, desfaz */
  refreshAtoLabels();calc()}
 function buildRow(tipo,qtd,val,iso,meses,mensal){
  var W=document.createElement('div');W.className='prow';W.dataset.tp=tipo;
@@ -888,8 +894,58 @@ function buildRow(tipo,qtd,val,iso,meses,mensal){
  +'<span class="ptotal">—</span><span class="premove">✕</span>'
  +'<div class="pfin">financiamento: <input class="pmeses" value="'+(meses||'')+'" placeholder="meses"> meses × <input class="pmensal money" value="'+(mensal?brl(mensal):'')+'" placeholder="R$/mês"> /mês</div>';
  g('flux').appendChild(W)}
-function addParcela(){buildRow('MENSAIS',1,0,isoOf(nextDay10(TODAY)));calc()}
+function addParcela(){buildRow('MENSAIS',1,0,isoOf(mensalStartDate()));calc()}
 function limparFlux(){g('flux').innerHTML='';calc()}
+/* ===== 2 primeiras MENSAIS obrigatórias (venda CEF) =====
+   Valor de cada uma = TETO do comprometimento (renda × limite). Exibidas como
+   "2× (X + 250)" onde X = teto − 250 (o acréscimo fixo fica embutido no teto).
+   O restante das mensais é redistribuído para MANTER o total (= venda).
+   Linha TRAVADA (data-acr): não editável nem removível. Início pela regra de data. */
+function _tetoMensal(){var renda=rendaTot();if(!renda)return 0;var lim=renda>RULES.compCorte?RULES.compAcima:RULES.compAbaixo;return r2(renda*lim/100)}
+function mensObrigRow(){return document.querySelector('#flux .prow[data-acr]')}
+function mensObrigAtiva(){return !!mensObrigRow()}
+function aplicarMensObrig(){
+ /* só CEF/MCMV — SBPE nunca recebe o acréscimo das obrigatórias */
+ if(g('tvenda').value!=='CEF'||g('sbpe').checked||mensObrigAtiva())return false;
+ var teto=_tetoMensal();if(teto<=0)return false;
+ var rows=[].slice.call(document.querySelectorAll('#flux .prow')).filter(function(r){return r.querySelector('.ptipo').value==='MENSAIS'});
+ if(!rows.length)return false;
+ rows.sort(function(a,b){return (a.querySelector('.pdata').value||'').localeCompare(b.querySelector('.pdata').value||'')});
+ var R=rows[0],Q=parseInt(R.querySelector('.pqtd').value)||0,V=cur(R.querySelector('.pvalor').value);
+ if(Q<3)return false;
+ var total=r2(Q*V),restQ=Q-2,restV=r2((total-2*teto)/restQ);
+ if(restV<0)return false;
+ var D=isoOf(mensalStartDate());
+ buildRow('MENSAIS',2,teto,D);
+ var acrRow=g('flux').lastElementChild;acrRow.dataset.acr='1';acrRow.dataset.acrbase=V;
+ g('flux').insertBefore(acrRow,R);
+ R.querySelector('.pqtd').value=restQ;R.querySelector('.pvalor').value=brl(restV);R.querySelector('.pdata').value=isoOf(addMo(parseISO(D),2));
+ travarMensObrig(acrRow);
+ return true;
+}
+function removerMensObrig(){
+ var acrRow=mensObrigRow();if(!acrRow)return;
+ var base=cur(acrRow.dataset.acrbase||'0');
+ var next=acrRow.nextElementSibling;
+ while(next&&(!next.classList.contains('prow')||next.querySelector('.ptipo').value!=='MENSAIS'))next=next.nextElementSibling;
+ if(next){var Q=parseInt(next.querySelector('.pqtd').value)||0;
+  next.querySelector('.pqtd').value=Q+2;next.querySelector('.pvalor').value=brl(base);
+  var d=parseISO(next.querySelector('.pdata').value);if(d)next.querySelector('.pdata').value=isoOf(addMo(d,-2))}
+ acrRow.remove();
+}
+/* renda mudou → recalcula o teto mantendo o orçamento das mensais */
+function atualizarMensObrig(){if(mensObrigAtiva()){removerMensObrig();aplicarMensObrig()}}
+/* SBPE: nunca aplica o acréscimo; desfaz se já estava aplicado. MCMV (CEF sem SBPE): aplica. */
+function onSbpe(){if(g('sbpe').checked)removerMensObrig();else if(g('tvenda').value==='CEF')aplicarMensObrig();calc()}
+function travarMensObrig(row){
+ var acr=RULES.mensalAcresc!=null?+RULES.mensalAcresc:250,val=cur(row.querySelector('.pvalor').value),X=r2(val-acr);
+ ['.ptipo','.pqtd','.pvalor','.pdata','.pmeses','.pmensal'].forEach(function(s){var e=row.querySelector(s);if(e){e.disabled=true;e.style.opacity='.65'}});
+ var rm=row.querySelector('.premove');if(rm)rm.style.display='none';
+ var dg=row.querySelector('.pdrag');if(dg)dg.style.visibility='hidden';
+ var b=row.querySelector('.plockbadge');
+ if(!b){b=document.createElement('div');b.className='plockbadge';b.style.cssText='grid-column:1/-1;font-size:10.5px;font-weight:800;color:#8E1B1B;margin-top:3px';row.appendChild(b)}
+ b.textContent='🔒 Mensal obrigatória (CEF) · 2× ('+brl(X)+' + '+brl(acr)+') = '+brl(val)+'/mês — no teto do comprometimento';
+}
 g('flux').addEventListener('input',function(){calcDeb()});
 g('flux').addEventListener('change',function(e){if(e.target.classList.contains('ptipo')){var row=e.target.closest('.prow'),nv=e.target.value;row.dataset.tp=nv}calc()});
 g('flux').addEventListener('click',function(e){if(e.target.classList.contains('premove')){e.target.closest('.prow').remove();calc()}});
@@ -936,7 +992,7 @@ function calc(){
   if(GARSET.indexOf(tp)>=0)gar+=tot;
   if(PSPRE.indexOf(tp)>=0)psPre+=tot;
   if(PSPOS.indexOf(tp)>=0)psPos+=tot;
-  if(tp==='MENSAIS')mensal+=vl;if(tp==='ATO')ato+=vl;
+  if(tp==='MENSAIS'){if(vl>mensal)mensal=vl}if(tp==='ATO')ato+=vl; /* mensal = PICO mensal (maior parcela), não a soma — sequências MENSAIS são sequenciais */
   var isFin=FINSET.indexOf(tp)>=0,pf=r.querySelector('.pfin');
   if(isFin){pf.style.display='flex';
    var fmes=parseInt(r.querySelector('.pmeses').value)||0,fmen=cur(r.querySelector('.pmensal').value);
@@ -971,8 +1027,15 @@ function calc(){
  /* à vista + parcela extra além de ENTRADA/COMP. ENTRADA = venda direta */
  if(g('tvenda').value==='À VISTA'&&fluxExtras){g('tvenda').value='DIRETO';refreshAtoLabels()}
  var tvenda=g('tvenda').value;
+ /* acréscimo obrigatório: +R$250 em cada uma das 2 primeiras parcelas MENSAIS (só CEF).
+    o comprometimento usa o PICO mensal (mensal + acréscimo), pra não furar a regra. */
+ /* se o split já foi aplicado (linha marcada data-acr), o pico já é 750 — não soma de novo.
+    senão, é a rede de segurança: pico = mensal + acréscimo (só CEF). */
+ var hasAcr=!!document.querySelector('#flux .prow[data-acr]');
+ var mensalAcr=(g('tvenda').value==='CEF'&&!g('sbpe').checked&&mensal>0&&!hasAcr)?(RULES.mensalAcresc!=null?+RULES.mensalAcresc:250):0;
+ var mensalPico=r2(mensal+mensalAcr);
  var pre=r2(gar+psPre),falta=r2(venda-soma),lim=renda>RULES.compCorte?RULES.compAcima:RULES.compAbaixo,
-     comp=renda?mensal/renda*100:0,compR=Math.round(comp*10)/10,pmax=renda*lim/100;
+     comp=renda?mensalPico/renda*100:0,compR=Math.round(comp*10)/10,pmax=renda*lim/100;
  g('proposta').textContent=brl(venda);g('soma').textContent=brl(soma);
  var fc=g('falta');fc.textContent=Math.abs(falta)<1?'R$ 0':brl(falta);fc.style.color=Math.abs(falta)<1?'var(--green-d)':(falta>0?'var(--red-d)':'var(--amber)');
  g('gar').textContent=brl(gar);
@@ -989,7 +1052,7 @@ function calc(){
  var trel=taxaRel(renda);
  g('taxarel').textContent=trel?brl(trel):'—';
  g('compbar').style.width=Math.min(comp/lim*100,100)+'%';g('compbar').style.background=comp<=lim?'var(--green)':'var(--red)';
- g('complbl').textContent='Comprometimento · '+comp.toFixed(1)+'% de '+lim+'%';
+ g('complbl').textContent='Comprometimento · '+comp.toFixed(1)+'% de '+lim+'%'+(mensalAcr>0?' · pico c/ +'+brl(mensalAcr)+' nas 2 primeiras mensais':'');
  var ng=g('neg');if(falta>0.5){var nroom=(mensal<pmax-1);ng.innerHTML='<div class="hint">Faltam '+brl(falta)+' para fechar — negocie desconto, aumente a entrada'+(nroom?', ou a parcela mensal (ainda há folga no comprometimento)':'')+'.</div>'}else ng.innerHTML='';
  var pr=posRule(g('tipologia').value),pctPos=venda?posTotal/venda*100:0;
  var pos10=renda*(RULES.posPctRenda/100),cPos10=(posMaxV<=pos10+0.5);
@@ -1021,7 +1084,11 @@ function calc(){
  var posDtMsgs=posDtBad.filter(function(m,i){return posDtBad.indexOf(m)===i}),cPosDt=posDtMsgs.length===0;
  var vB=buyersOk(),cBuyers=vB.ok;
  var vFi=fiadorOk(psPos),cFiador=vFi.ok;
- var ok=cR&&cE&&cC&&cT&&cF&&cM&&cMS&&cPos&&cPosDt&&cAno&&cForma&&cGar&&cM2p&&cVgv&&cBuyers&&cFiador;
+ /* nenhuma parcela pode ter data anterior a hoje */
+ var hoje0=new Date(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate()),datasPassadas=[];
+ document.querySelectorAll('#flux .prow').forEach(function(r){var dd=parseISO(r.querySelector('.pdata').value);if(dd&&dd<hoje0){var t=r.querySelector('.ptipo').value;if(datasPassadas.indexOf(t)<0)datasPassadas.push(t)}});
+ var cDatas=datasPassadas.length===0;
+ var ok=cR&&cE&&cC&&cT&&cF&&cM&&cMS&&cPos&&cPosDt&&cAno&&cForma&&cGar&&cM2p&&cVgv&&cBuyers&&cFiador&&cDatas;
  chk('renda',cR,cR?'Renda mínima '+brl(RULES.rendaMin):'Renda abaixo de '+brl(RULES.rendaMin)+' — só 100% financiado');
  chk('entrada',cE,cE?'ENTRADA mínima '+brl(RULES.entradaMin):'ENTRADA abaixo de '+brl(RULES.entradaMin)+' — para o fluxo fechar, a ENTRADA deve ser maior');
  chk('comp',cC,cC?'Comprometimento '+compR.toFixed(1)+'% ≤ '+lim+'%':'Comprometimento '+compR.toFixed(1)+'% acima de '+lim+'%');
@@ -1047,11 +1114,13 @@ function calc(){
  chk('aprov',!sujeito,sujeito?'SUJEITO A APROVAÇÃO — '+aprovMotivos.join(' · '):'Fluxo padrão CEF — sem aprovação especial');
  chk('buyers',cBuyers,vB.msg);
  chk('fiador',cFiador,vFi.msg);
+ chk('datas',cDatas,cDatas?'Nenhuma parcela com data retroativa':'Datas no passado: '+datasPassadas.join(', ')+' — ajuste para hoje ou depois');
  /* linha de indicadores (espelho do selo D55 da planilha CALCULO PROPOSTA) */
  var dl=g('d55line');
  if(dl){var todosOk=cVgv&&cGar&&cM2p;
   dl.textContent='VGV: '+(cVgv?'OK':'FORA')+' || GARANT.: '+(cGar?'OK':'ABAIXO')+' || M² PRÉ-CHAVES: '+(cM2p?'OK':'ABAIXO')+(RR.row?'':' (sem matriz)');
   dl.style.color=todosOk?'var(--green-d)':'var(--red-d)'}
+ window.PROPOSTA_OK=ok; /* usado pra bloquear a impressão quando há pendências */
  var st=g('status');st.textContent=!ok?'Ajustes pendentes':(sujeito?'Pronta · sujeito a aprovação':'Pronta para enviar');st.className='status '+(ok&&!sujeito?'ok':'no');
  var sm=g('statusmini');sm.textContent=!ok?'Pendente':(sujeito?'Sujeito a aprovação':'✓ Pronta');sm.className='status-mini '+(ok&&!sujeito?'ok':'no');
  /* barra de decisão (kpibar): preço · mensal · comprometimento · fechamento · status */
@@ -1077,6 +1146,8 @@ function calc(){
     +'última <b>'+brl(er.max)+'</b> <span style="color:var(--mut-lt)">('+mesAno_(er.fim)+')</span><br>'
     +'<span style="color:var(--mut);font-weight:600;font-size:11px">'+(er.real?'com base no FINANC. CEF do fluxo':'estimativa pela renda')+'</span>';
   }else{evEl.style.display='none';evEl.innerHTML=''}}
+ var bAcr=g('btnAcrCEF');
+ if(bAcr)bAcr.style.display=(g('tvenda').value==='CEF'&&mensal>0&&!hasAcr)?'':'none';
  calcCom();
  advise()}
 function toggleChkOk(){g('chk-card').classList.toggle('collapsed');calc()}
@@ -1094,6 +1165,8 @@ function allocFlow(c,useFgts){
  var r=r2(c.rem),sug=[];
  if(r<=0.005)return{sug:sug,alertEntrada:false,leftover:0};
  var caixa=c.tvenda==='CEF';
+ /* base das parcelas PÓS: nunca antes de hoje (se a obra já foi entregue, parte de hoje) */
+ var entBase=(c.entDate&&c.entDate<TODAY)?TODAY:c.entDate;
  if(c.tvenda==='À VISTA'){
   var entr=r2(Math.max(0,RULES.entradaMin-c.curAto)),compl=r2(r-entr);
   if(entr>0)sug.push(['ATO',1,entr,'']);
@@ -1116,7 +1189,7 @@ function allocFlow(c,useFgts){
  if(!c.temPre){
   var availM=r2(Math.max(0,c.pmax-c.curMensal));
   if(availM>0&&r>0.005){
-   var mStart=nextDay10(TODAY),dM=new Date(mStart.getTime());
+   var mStart=mensalStartDate(),dM=new Date(mStart.getTime());
    while(dM<=c.entDate&&vmN<360){vmN++;dM=addMo(dM,1)}
    if(vmN>0){var useM=Math.min(r,r2(vmN*availM));vm=fl2(useM/vmN);if(vm<0.01){vm=0;vmN=0}else{r=r2(r-r2(vm*vmN));vmIso=isoOf(mStart)}}
   }
@@ -1137,13 +1210,13 @@ function allocFlow(c,useFgts){
  if(r>0.005&&posCap>0&&pcapM>0&&(vm>0||c.curMensal>0)){
   posM=c.pr.meses;var useP=Math.min(r,posCap,r2(pcapM*posM));
   posV=fl2(useP/posM);if(posV>pcapM)posV=pcapM;
-  if(posV<0.01){posV=0;posM=0}else{r=r2(r-r2(posV*posM));posIso=isoOf(nextDay10(c.entDate))}
+  if(posV<0.01){posV=0;posM=0}else{r=r2(r-r2(posV*posM));posIso=isoOf(nextDay10(entBase))}
  }
  /* 7) ANUAIS PÓS — 10/dez dentro da janela pós, sem repetir ano já usado */
  var anPosV=0,anPosN=0,anPosIso='';
- var posFim=addMo(c.entDate,c.pr.meses);
+ var posFim=addMo(entBase,c.pr.meses);
  if(r>0.005&&acap>0){
-  var pStart=nextDec10(c.entDate);
+  var pStart=nextDec10(entBase);
   while(pStart<=posFim&&usadosPos[pStart.getFullYear()])pStart=new Date(pStart.getFullYear()+1,11,10);
   var maxP=0,dP=new Date(pStart.getTime());
   while(dP<=posFim&&!usadosPos[dP.getFullYear()]&&maxP<8){maxP++;dP=new Date(dP.getFullYear()+1,11,10)}
@@ -1155,18 +1228,18 @@ function allocFlow(c,useFgts){
  var uniV=0,uniIso='';
  if(!c.temPre&&r>0.005&&acap>0){
   var uD=unicaDate(c.entDate);
-  if(uD&&!usadosPre[uD.getFullYear()]){uniV=r2(Math.min(r,acap));uniIso=isoOf(uD);r=r2(r-uniV);usadosPre[uD.getFullYear()]=1}
+  if(uD&&uD>=TODAY&&!usadosPre[uD.getFullYear()]){uniV=r2(Math.min(r,acap));uniIso=isoOf(uD);r=r2(r-uniV);usadosPre[uD.getFullYear()]=1}
  }
  /* 9) ÚNICA PÓS — preferência: 10/jun (do ano da entrega se ainda cair depois dela,
     senão junhos seguintes); alternativa: o dia 10 imediatamente após a entrega */
  var uniPosV=0,uniPosIso='';
  if(r>0.005&&acap>0){
-  var candU=[],jn0=new Date(c.entDate.getFullYear(),5,10);
-  if(jn0>c.entDate)candU.push(jn0);
-  candU.push(nextDay10(c.entDate));
-  for(var jy=1;jy<=6;jy++)candU.push(new Date(c.entDate.getFullYear()+jy,5,10));
+  var candU=[],jn0=new Date(entBase.getFullYear(),5,10);
+  if(jn0>entBase)candU.push(jn0);
+  candU.push(nextDay10(entBase));
+  for(var jy=1;jy<=6;jy++)candU.push(new Date(entBase.getFullYear()+jy,5,10));
   for(var ci=0;ci<candU.length;ci++){var cd=candU[ci];
-   if(cd>c.entDate&&cd<=posFim&&!usadosPos[cd.getFullYear()]){
+   if(cd>entBase&&cd<=posFim&&!usadosPos[cd.getFullYear()]){
     uniPosV=r2(Math.min(r,acap));uniPosIso=isoOf(cd);r=r2(r-uniPosV);usadosPos[cd.getFullYear()]=1;break}}
  }
  /* 10) o que não coube volta pra ENTRADA (e alerta se passou do mínimo) */
@@ -1220,14 +1293,16 @@ function advise(){var box=g('advise');
  else{html+=rowsOf(d.sug)+'<button class="advbtn" onclick="applyAdvise(false)">Aplicar ao fluxo de pagamento</button>'}
  box.innerHTML=html}
 function applyAdvise(alt){var d=suggest(),arr=alt?d.sugAlt:d.sug;if(!arr)return;
+ var entB=(d.ent&&d.ent<TODAY)?TODAY:d.ent; /* base pós nunca no passado */
  arr.forEach(function(x){var iso,mes='',men='';
   if(x[4]){iso=x[4]}                                             /* data explícita (dia 10) vinda do allocFlow */
-  else if(x[3]==='fin'){iso=isoOf(d.ent);mes=420;men=d.parcela||1100}
-  else if(x[0]==='MENSAIS PÓS'){iso=isoOf(nextDay10(d.ent))}
-  else if(x[0]==='ANUAIS'||x[0]==='ANUAIS PÓS'){iso=isoOf(nextDec10(x[0]==='ANUAIS'?TODAY:d.ent))}
-  else if(x[0]==='MENSAIS')iso=isoOf(nextDay10(TODAY));
+  else if(x[3]==='fin'){iso=isoOf(entB);mes=420;men=d.parcela||1100}
+  else if(x[0]==='MENSAIS PÓS'){iso=isoOf(nextDay10(entB))}
+  else if(x[0]==='ANUAIS'||x[0]==='ANUAIS PÓS'){iso=isoOf(nextDec10(x[0]==='ANUAIS'?TODAY:entB))}
+  else if(x[0]==='MENSAIS')iso=isoOf(mensalStartDate());
   else iso=isoOf(TODAY);
   buildRow(x[0],x[1],x[2],iso,mes,men)});
+ if(g('tvenda').value==='CEF')aplicarMensObrig(); /* trava as 2 primeiras no teto */
  calc()}
 
 /* ===== painel de regras editável ===== */
@@ -1281,10 +1356,20 @@ function evObraRange(prod,renda,financReal,terreno){
  var financTotal=(financReal>0)?financReal:(f.maxCom||0);
  if(!financTotal)return null;
  var evTr=(RULES.evTr!=null?+RULES.evTr:0.18),evSeg=(RULES.evSeguro!=null?+RULES.evSeguro:23.48),evAdm=(RULES.evAdm!=null?+RULES.evAdm:25);
- var financObra=Math.max(0,financTotal-terreno),taxaMes=(f.taxa||0)/100/12,acumP=0,vals=[];
- sched.forEach(function(m){acumP+=m.pct;var saldo=financObra*acumP+terreno;
-  vals.push(saldo*taxaMes+saldo*(evTr/100)+evSeg+evAdm)});
- return{min:Math.min.apply(null,vals),max:Math.max.apply(null,vals),n:vals.length,real:financReal>0,ini:sched[0].periodo,fim:sched[sched.length-1].periodo}}
+ var financObra=Math.max(0,financTotal-terreno),taxaMes=(f.taxa||0)/100/12,acumP=0,vals=[],dts=[];
+ /* parcelas só do MÊS ATUAL em diante — os meses já decorridos entram apenas no
+    % acumulado (saldo), refletindo a evolução de obra já concluída. O comprador
+    não paga juros de obra retroativos. */
+ var hoje=new Date(TODAY.getFullYear(),TODAY.getMonth(),1);
+ sched.forEach(function(m){
+  acumP+=m.pct;
+  var d=new Date(m.periodo+'T00:00:00');
+  if(d<hoje)return;
+  var saldo=financObra*acumP+terreno;
+  vals.push(saldo*taxaMes+saldo*(evTr/100)+evSeg+evAdm);dts.push(m.periodo);
+ });
+ if(!vals.length)return null;
+ return{min:Math.min.apply(null,vals),max:Math.max.apply(null,vals),n:vals.length,real:financReal>0,ini:dts[0],fim:dts[dts.length-1]}}
 async function fetchAll_(tbl,cols,ord){
  var out=[],page=1000,from=0;
  while(true){
@@ -1588,7 +1673,8 @@ function abrirProposta(i){
  g('sbpe').checked=!!d.sbpe;
  if(EMPSEL&&OBRAS_IDX[EMPSEL])renderObra(OBRAS_IDX[EMPSEL]);
  /* fluxo */
- (d.fluxo||[]).forEach(function(f){buildRow(f.tipo,f.qtd,f.valor,f.data)});
+ (d.fluxo||[]).forEach(function(f){buildRow(f.tipo,f.qtd,f.valor,f.data);
+  if(f.acr){var lr=g('flux').lastElementChild;lr.dataset.acr='1';if(f.acrbase!=null)lr.dataset.acrbase=f.acrbase;travarMensObrig(lr)}});
  /* parceria / fiador */
  if(d.parceria){g('parc').checked=true;g('parcbox').style.display='block';
   g('parcnome').value=d.parceria.nome||'';g('c_pa').value=d.parceria.pct||'';}
@@ -1653,13 +1739,20 @@ var QPSTEPS=[
   ['Melhor condomínio','🏢','Quero lazer completo, segurança e comodidades.'],
   ['Maior valorização','📈','Quero um investimento inteligente com potencial de retorno.']
  ]},
- {k:'lazer',t:'multi',max:3,ic:'🏊',q:'Quais áreas de lazer são essenciais para você?',hint:'Selecione até 3 opções que não podem faltar no seu futuro condomínio.',
+ {k:'lazer',t:'multi',max:5,ic:'🏊',q:'Quais áreas de lazer são essenciais para você?',hint:'Selecione até 5 opções que não podem faltar no seu futuro condomínio.',
   sub:'Saber o que você busca em um condomínio nos ajuda a mostrar empreendimentos que combinam com seu estilo de vida.',o:[
+  ['Piscina','🏊','Lazer e bem-estar para toda a família.'],
   ['Academia','🏋️','Rotina de exercícios sem sair de casa.'],
   ['Playground','🎠','Para as crianças brincarem com segurança.'],
   ['Salão de festas','🎉','Para celebrar momentos especiais.'],
+  ['Espaço gourmet','🍽️','Encontros e jantares com estilo.'],
   ['Churrasqueira','🍖','Para reunir amigos e família.'],
   ['Espaço pet','🐾','Meu pet também merece um espaço especial.'],
+  ['Quadra esportiva','⚽','Esporte e diversão perto de casa.'],
+  ['Beach tênis','🎾','A quadra da moda dentro do condomínio.'],
+  ['Sauna','🧖','Relaxamento e bem-estar no dia a dia.'],
+  ['Brinquedoteca','🧸','Espaço seguro e lúdico para as crianças.'],
+  ['Sala de jogos','🎮','Diversão para todas as idades.'],
   ['Coworking','💻','Ambiente para trabalhar ou estudar com conforto.'],
   ['Indiferente','🤷','Nenhuma das opções é essencial para mim.']
  ]},
@@ -1871,8 +1964,15 @@ async function salvarPesquisa(B){
 var RECO_UNITS=null,RECO_LOADING=null,RECO_FONTE='',ESTOQUE_SET=null;
 /* chave normalizada empreendimento||unidade p/ marcar "em estoque" no combo */
 function estKey(emp,unid){return snorm(emp)+'||'+snorm(unid)}
-function buildEstoqueSet(){ESTOQUE_SET={};(RECO_UNITS||[]).forEach(function(u){ESTOQUE_SET[estKey(u.empreendimento,u.unidade)]=1})}
-function emEstoque(emp,unid){return !!(ESTOQUE_SET&&ESTOQUE_SET[estKey(emp,unid)])}
+/* código "limpo" da unidade: só o 1º bloco antes de espaço — ignora sufixos de categoria
+   que às vezes vêm grudados no campo Unidade do estoque (ex: "1-0003 NR" → "1-0003") */
+function unidCode(unid){return snorm(unid).split(' ')[0]}
+function estKeyCode(emp,unid){return snorm(emp)+'||'+unidCode(unid)}
+function buildEstoqueSet(){ESTOQUE_SET={};(RECO_UNITS||[]).forEach(function(u){
+ ESTOQUE_SET[estKey(u.empreendimento,u.unidade)]=1;
+ ESTOQUE_SET[estKeyCode(u.empreendimento,u.unidade)]=1;
+})}
+function emEstoque(emp,unid){return !!(ESTOQUE_SET&&(ESTOQUE_SET[estKey(emp,unid)]||ESTOQUE_SET[estKeyCode(emp,unid)]))}
 async function fetchAllReco_(tbl,cols){
  var out=[],page=1000,from=0;
  while(true){
@@ -1992,21 +2092,25 @@ function montarExportHTML(propNum){
   return '<tr><td'+tdSt+'>'+nome+'</td><td'+tdSt+'>'+cpf+'</td><td'+tdSt+'>'+prof+'</td><td'+tdSt+'>'+renda+'</td></tr>'+qrow}).join('');
 
  var prows=document.querySelectorAll('#flux .prow'),n=prows.length,somaCalc=0,subsidioVal=0,
-     mObra=0,mPos=0,entradaTot=0;
+     mObra=0,mObrigVal=0,mRestVal=0,mPos=0,entradaTot=0;
  var fluxRowsArr=Array.prototype.map.call(prows,function(r,i){
-  var tipoV=r.querySelector('.ptipo').value,tipo=esc(tipoV==='ATO'?'ENTRADA':tipoV),qt=r.querySelector('.pqtd').value||'1',
+  var tipoV=r.querySelector('.ptipo').value,tipo=esc(tipoV==='ATO'?'ENTRADA':tipoV)+(r.dataset.acr?' <span style="font-size:7.5px;font-weight:800;color:#8E1B1B;letter-spacing:.03em">OBRIG.</span>':''),qt=r.querySelector('.pqtd').value||'1',
       val=sv(r.querySelector('.pvalor').value)||'—',dataV=r.querySelector('.pdata').value,
       dataLab=dataV?dfull(parseISO(dataV)):'—',totNum=cur(r.querySelector('.ptotal').textContent),
       vlNum=cur(r.querySelector('.pvalor').value);
+  /* mensais obrigatórias: mostra a composição X + 250 = valor (transparência da parcela) */
+  if(r.dataset.acr){var _acr=RULES.mensalAcresc!=null?+RULES.mensalAcresc:250;val=nb(vlNum-_acr)+' + '+nb(_acr)+' = '+nb(vlNum);}
   somaCalc=r2(somaCalc+totNum);
   if(tipoV==='SUBSÍDIO')subsidioVal+=totNum;
-  if(tipoV==='MENSAIS')mObra+=vlNum;
+  if(tipoV==='MENSAIS'){if(r.dataset.acr)mObrigVal=vlNum;else if(vlNum>mRestVal)mRestVal=vlNum;}
   if(tipoV==='MENSAIS PÓS')mPos+=vlNum;
   if(tipoV==='ATO'||tipoV==='COMP. ENTRADA'||tipoV==='SALDO DE ENTRADA')entradaTot=r2(entradaTot+totNum);
   var isPos=PSPOS.indexOf(tipoV)>=0,isPre=PSPRE.indexOf(tipoV)>=0||GARSET.indexOf(tipoV)>=0;
   var rowCls=isPos?' class="pv-row-pos"':(isPre?' class="pv-row-pre"':'');
   var tag=isPos?'<span class="pv-tag pos">PÓS</span>':(isPre?'<span class="pv-tag pre">PRÉ</span>':'');
   return{i:i,tot:totNum,html:'<tr'+rowCls+'><td>'+tag+tipo+'</td><td>'+qt+'</td><td>'+esc(val)+'</td><td>'+dataLab+'</td><td style="text-align:right;font-weight:800" data-tot="'+i+'">'+nb(totNum)+'</td></tr>'}});
+ /* mensal na obra = valor recorrente (pico), NÃO a soma das linhas MENSAIS (obrig. + demais) */
+ mObra=r2(mRestVal||mObrigVal);
 
  var vendaNum=cur(g('venda').value),diff=r2(vendaNum-somaCalc),ajusteNota='';
  if(n>0&&diff!==0&&Math.abs(diff)<=1){
@@ -2053,7 +2157,8 @@ function montarExportHTML(propNum){
  var parcHTML=parc?('<div class="pv-note" style="font-style:normal;font-size:9.5px;color:#555;margin-top:4px"><b>Parceria</b>: '+esc(g('parcnome').value||'—')+' · '+esc(g('c_pa').value||'0')+'% · comissão '+esc(sv(g('comval').value)||'—')+'</div>'):'';
 
  var ok=g('status').classList.contains('ok');
- var hoje=TODAY.toLocaleDateString('pt-BR');
+ var _ag=new Date(),hoje=_ag.toLocaleDateString('pt-BR')+' '+_ag.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+ var _areaM2=parseFloat((g('area').value||'0').replace(',','.'))||0,vgvM2=(_areaM2>0&&vendaNum)?r2(vendaNum/_areaM2):0;
  return '<div class="pv-page">'
  +'<div class="pv-head" style="align-items:center"><div style="flex:1;display:flex;align-items:center">'
  +'<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9Ijg2IiB2aWV3Qm94PSIwIDAgNTAwIDg2IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KPHBhdGggZD0iTTE1LjUgNTIuMDgwNkwyMC43NzcxIDgwLjI5MDFMNDMuMjM5MyA4NS40MjkxTDM3Ljk4OSA1Mi4yMDFMMTUuNSA1Mi4wODA2Wk05Ni4xMzE5IDUwLjU1MTNMNjQuMzU2MyAwLjE2NTQ5NkwzMy40NDYzIDBMNjUuNDE2NyA1MC4zODY4TDk2LjEzMTkgNTAuNTUxM1pNMCA1MC4wMzc2TDMyLjA0NDEgNTAuMjA4OEw0Ny42Nzg5IDI1Ljk5NDdMMzEuNzQyMSAwLjg3Nzg0NUwwIDUwLjAzNzZaTTU1LjU3MzkgODUuNDk0OEw3OC4wODk3IDgwLjU5NjZMODMuNjY3OSA1Mi40NDUyTDYxLjE3ODkgNTIuMzI0OEw1NS41NzM5IDg1LjQ5NDhaIiBmaWxsPSIjRUMxQzI0Ii8+DQo8cGF0aCBkPSJNMjY2LjMxOSAxNy45MDI3TDI2NS41MTQgMTMuODM0NEwyNTMuMTA0IDEzLjc2ODJMMjUyLjkwNiA1MC45NDUxTDI2Ni43NDQgNTEuMDE5TDI2Ni44NDcgMzEuNjc4MUMyNjYuODczIDI2Ljc4NjIgMjY5LjgxNyAyNC42OTU3IDI3My4yNzcgMjQuNzE0NEMyNzUuNjA5IDI0LjcyNjkgMjc3LjI2MSAyNS4xODY0IDI3OS41MDcgMjcuMDA0OUwyODUuMTI2IDE3LjAyNTNDMjgyLjczMyAxNC40NTQyIDI3OS4xMzIgMTMuMDA1IDI3NS4zNyAxMi45ODQ5QzI3MS43NjEgMTIuOTY1MiAyNjguMjkzIDE0LjQ1MTMgMjY2LjMxOSAxNy45MDI3Wk0xOTQuOTA0IDEyLjU1NDZDMTg0LjgyNiAxMi41MDA4IDE3NC4xODkgMTguNDYzOSAxNzQuMTE3IDMyLjAxMDZDMTc0LjA0NCA0NS41NTYyIDE4My45NDEgNTEuNDA1MiAxOTUuNjczIDUxLjQ2NzVDMjAyLjA2NiA1MS41MDE2IDIwOC4xNjkgNDkuNTAyMiAyMTIuNjI4IDQ1LjM4NjlMMjA1LjkgMzcuNzQ5N0MyMDMuNDg0IDM5LjU0MTggMjAwLjM5NCA0MC43MzA1IDE5Ni4zMzMgNDAuNzA4NEMxOTMuMzI0IDQwLjY5MjEgMTg5LjA0NSAzOS4yMzkxIDE4OC4wODUgMzUuOTIzNUwyMTQuMDMxIDM2LjA2MjFDMjE3LjI2OSAyMS40MDM1IDIwOC4wNjUgMTIuNjI0NiAxOTQuOTA0IDEyLjU1NDZaTTE4OC4yMDggMjcuMDQyOEMxODkuMTQzIDIwLjk1MjEgMjAxLjMyNSAyMS4yNDM4IDIwMS42NyAyNy4xMTQ4TDE4OC4yMDggMjcuMDQyOFpNMzk5LjEzMSAxOC41MzczQzM5Ny4xOTIgMTUuNTE2NyAzOTMuNTE1IDEzLjY5MSAzODguMjUyIDEzLjY2MjdDMzc3LjQyMSAxMy42MDQ2IDM3MC4xNTYgMjEuOTk1NSAzNzAuMDk3IDMyLjk4MjlDMzcwLjAzOSA0My44MjA3IDM3Ni4wODkgNTEuNjAzOCAzODYuOTkyIDUyLjMzOTZDMzkxLjEyNyA1Mi41ODcxIDM5Ni4wOTcgNTEuMzM0NiAzOTkuMjc1IDQ3LjczOThMMzk5Ljg1NSA1MS43MzA5TDQxMi42NDEgNTEuNzk5NUw0MTIuODM5IDE0LjYyMjVMMzk5LjgyOCAxNC41NTNMMzk5LjEzMSAxOC41MzczWk0zOTEuMjYyIDQxLjIyMzZDMzg3LjEyNSA0MS4yMDE1IDM4My44MzMgMzguMjQ5NSAzODMuODYgMzMuMDU2M0MzODMuODg4IDI3Ljg2MzYgMzg3LjIxMyAyNC44NzEyIDM5MS4zNDkgMjQuODkzM0MzOTYuMjM4IDI0LjkxOTcgMzk5LjAwNCAyOC4xNjk2IDM5OC45NzcgMzMuMTM3NEMzOTguOTU0IDM3LjUwMjEgMzk1LjkyNiA0MS4yNDg2IDM5MS4yNjIgNDEuMjIzNlpNMTU0LjM3MSAxMi40MTIxQzE0OS4yNTcgMTIuMzg0OCAxNDUuMTEyIDEzLjg2OCAxNDIuMDA4IDE3LjY4OTdDMTQwLjE0NiAxNC4yMTc3IDEzNi41NDYgMTIuNDY3NyAxMzIuNzg1IDEyLjM3MThDMTI4Ljk1MSAxMi4yNzU5IDEyNC44OCAxMy44MzU0IDEyMi41MzIgMTcuMDU4TDEyMS41NzYgMTMuMDY0NUwxMDkuOTE4IDEzLjAwMjFMMTA5LjcyIDUwLjE3OTFMMTIzLjQ4MyA1MC4yNTI1TDEyMy41OTIgMjkuODU3N0MxMjMuNjg5IDI1Ljc5NDcgMTI2LjE4IDIzLjkyNzIgMTI4LjUxMiAyMy45Mzk3QzEzMC45OTMgMjMuOTUzMSAxMzIuNDE1IDI1LjM4OTMgMTMyLjM5MiAyOS42Nzk3TDEzMi4yODIgNTAuMjk5OUwxNDUuODk1IDUwLjM3MjlMMTQ2LjAwNCAyOS45MDM3QzE0Ni4wMjUgMjUuODM4OCAxNDguNTE2IDI0LjI3MjEgMTUwLjg0NyAyNC4yODQ2QzE1Mi44NzggMjQuMjk1NiAxNTQuNjc1IDI1Ljg4NDggMTU0LjY1MyAyOS43OTg3TDE1NC41NDMgNTAuNDE4OUwxNjguMzgxIDUwLjQ5MjhMMTY4LjQ5MiAyOS43OTczQzE2OC41NTggMTcuNDU1NiAxNjIuNDE4IDEyLjQ1NTMgMTU0LjM3MSAxMi40MTIxWk0yNDEuMTU3IDQwLjM0NjdDMjM5LjA1MSA0MC4zMzU3IDIzNy41NTMgMzkuMzQ4IDIzNy40OTIgMzYuNzE0TDIzNy41NTcgMjQuNTIzTDI0NS45OCAyNC41NjgxTDI0Ni4wMzcgMTMuOTU1OEwyMzcuNjkgMTMuOTExMUwyMzcuNzQ3IDMuMTUwMTJMMjIzLjk3NiA0LjU4MTA2TDIyMy45MjYgMTMuODM3M0wyMTcuOTg0IDEzLjgwNTZMMjE3LjkyOCAyNC40MTc5TDIyMy44NyAyNC40NDk2TDIyMy44MDUgMzYuNjQwNkMyMjMuNTE2IDQ4LjMwMzkgMjMwLjExNyA1MS43MjU2IDIzNy40ODcgNTEuNzY0OUMyNDEuMzIyIDUxLjc4NTYgMjQ1LjAxMiA1MS4xMjc5IDI0OC4xNzkgNDkuMzM5NkwyNDUuMjI1IDM5LjA4OEMyNDQuMDk0IDM5LjgzNDkgMjQyLjUxMSA0MC4zNTM5IDI0MS4xNTcgNDAuMzQ2N1pNMzUzLjUxMiA0MC43MjA5QzM0OC4yNDggNDAuNjkyNiAzNDUuNDg0IDM3LjA2NjEgMzQ1LjUwNiAzMy4wMDI2QzM0NS41MzEgMjguMzM2MSAzNDguNDA5IDI0LjUxMjkgMzUzLjY3MyAyNC41NDEyQzM1Ni4xNTYgMjQuNTU0NyAzNTguMjU3IDI1LjM5NDEgMzYwLjA1MSAyNy4yODQ2TDM2Ny40NjUgMTkuMzQ4QzM2My41NzUgMTUuNDEzMSAzNTguMjQ1IDEzLjUwMjkgMzUyLjkwNiAxMy40NzQxQzM0Mi40NTEgMTMuNDE4IDMzMi4wNDEgMTkuMzA4MiAzMzEuOTY4IDMyLjg1NDhDMzMxLjg5NCA0Ni43NzY2IDM0Mi4wOTMgNTIuMTc1MSAzNTIuOTI0IDUyLjIzMzFDMzU4LjQ5IDUyLjI2MjkgMzYzLjg0MSA0OS45NTg5IDM2OC4zIDQ1Ljk5MzJMMzYwLjQ0OCAzNy42NzI5QzM1OC41NTcgMzkuNjk0MyAzNTYuMDY5IDQwLjczNDMgMzUzLjUxMiA0MC43MjA5Wk00ODYuOTg5IDE1LjAxOTJMNDg2LjI5MSAxOS4wMDM2QzQ4NC4zNTIgMTUuOTgzIDQ4MC42NzYgMTQuMTU3MiA0NzUuNDEyIDE0LjEyODlDNDY0LjU4MSAxNC4wNzA5IDQ1Ny4zMTcgMjIuNDYxNyA0NTcuMjU4IDMzLjQ0OTJDNDU3LjIgNDQuMjg3IDQ2My4yNSA1Mi4wNyA0NzQuMTUyIDUyLjgwNTlDNDc4LjI4OCA1My4wNTM0IDQ4My4yNTcgNTEuODAwOSA0ODYuNDM2IDQ4LjIwNjFMNDg3LjAxNiA1Mi4xOTcxTDQ5OS44MDEgNTIuMjY1N0w1MDAgMTUuMDg4OEw0ODYuOTg5IDE1LjAxOTJaTTQ3OC40MjMgNDEuNjg5OUM0NzQuMjg2IDQxLjY2NzggNDcwLjk5MyAzOC43MTU4IDQ3MS4wMjEgMzMuNTIzQzQ3MS4wNDkgMjguMzMwMyA0NzQuMzczIDI1LjMzOCA0NzguNTEgMjUuMzYwMUM0ODMuMzk5IDI1LjM4NiA0ODYuMTY0IDI4LjYzNjQgNDg2LjEzOCAzMy42MDQxQzQ4Ni4xMTUgMzcuOTY3OSA0ODMuMDg3IDQxLjcxNDggNDc4LjQyMyA0MS42ODk5Wk00MzYuNDU3IDI3Ljk5NUM0MzQuMiAyNy45MDcyIDQzMy42OCAyNi44NTEgNDMzLjY4MyAyNi4xNzM2QzQzMy42OTEgMjQuODE5IDQzNS4wNDcgMjQuMzc0MyA0MzcuMDAyIDI0LjM4NDhDNDQwLjAxMSAyNC4zMjU0IDQ0NC4yOTIgMjUuNDAyMyA0NDYuMzE2IDI2LjY5MzFMNDUyLjIyNiAxOC40NDYyQzQ0OC42MzEgMTUuNzE2NyA0NDMuMDc1IDEzLjg4MTQgNDM3LjA1OCAxMy44NDkzQzQyOC4zMzQgMTMuODAyNyA0MTkuODkzIDE2Ljk5MzIgNDE5Ljg0NSAyNS45NDg2QzQxOS43OTcgMzQuOTc5OSA0MjguNTA2IDM3Ljk2MDcgNDM1LjcyNSAzOC4yMjZDNDM4LjQzMSAzOC40NjU4IDQzOS42MyAzOS4wNzQxIDQzOS42MjQgNDAuMjc4NkM0MzkuNjE4IDQxLjQ4MjIgNDM4LjMzNiA0Mi4wNzg0IDQzNS44NTQgNDIuMDY1QzQzMi44NDcgNDEuODk4MSA0MjguMzM2IDQxLjU3MjggNDIyLjcxNiAzNy44NTU3TDQxOC4xNDkgNDcuOTE1NEM0MjIuMzQ1IDUxLjAyMzMgNDI5LjYyOSA1Mi44Njg3IDQzNi4wOTggNTIuOTAzM0M0NDUuMDQ4IDUyLjk1MTIgNDUzLjQxNCA0OS41MzM5IDQ1My40NjIgNDAuMzUzQzQ1My41MTYgMzAuNDk0MiA0NDQuMjAyIDI4LjI2MTcgNDM2LjQ1NyAyNy45OTVaTTMwNi44MDUgMTMuMjI3MUMyOTYuMDUxIDEzLjE2OTUgMjg1LjU2NiAxOC44MzM4IDI4NS40OTIgMzIuNjA1OUMyODUuNDIgNDYuMTUxNSAyOTUuOTE3IDUyLjA3NzcgMzA2LjU5NyA1Mi4xMzQ4QzMxNy4wNTEgNTIuMTkwOSAzMjcuODM3IDQ2LjM3OCAzMjcuOTEgMzIuODMyOEMzMjcuOTgzIDE5LjI4NjEgMzE3Ljc4NSAxMy4yODYxIDMwNi44MDUgMTMuMjI3MVpNMzA2LjY1NyA0MC43NzEzQzMwMS43NyA0MC43NDU0IDI5OS4wMDcgMzYuOTY3MyAyOTkuMDMgMzIuNjc4M0MyOTkuMDUzIDI4LjM4ODQgMzAxLjg1NiAyNC41NjQ3IDMwNi43NDQgMjQuNTkxMUMzMTEuNjMzIDI0LjYxNyAzMTQuMzk1IDI4LjQ3MDQgMzE0LjM3MiAzMi43NjAzQzMxNC4zNDggMzcuMjc2MiAzMTEuMzIxIDQwLjc5NjIgMzA2LjY1NyA0MC43NzEzWiIgZmlsbD0iI0VDMUMyNCIvPg0KPHBhdGggZD0iTTIzMi42NDkgNzIuMTg1NkMyMzEuODQ1IDcyLjE1NDQgMjMxLjY1OSA3MS43Nzc5IDIzMS42NjEgNzEuNTM2MUMyMzEuNjYzIDcxLjA1MzUgMjMyLjE0NyA3MC44OTUyIDIzMi44NDMgNzAuODk5MUMyMzMuOTE2IDcwLjg3ODQgMjM1LjQ0MiA3MS4yNjIyIDIzNi4xNjMgNzEuNzIxM0wyMzguMjY5IDY4Ljc4MjdDMjM2Ljk4OCA2Ny44MDk4IDIzNS4wMDggNjcuMTU2IDIzMi44NjMgNjcuMTQ0NUMyMjkuNzU0IDY3LjEyNzcgMjI2Ljc0NiA2OC4yNjQ2IDIyNi43MjkgNzEuNDU2NUMyMjYuNzEyIDc0LjY3NTIgMjI5LjgxNiA3NS43Mzc4IDIzMi4zODggNzUuODMxM0MyMzMuMzUzIDc1LjkxNjcgMjMzLjc4IDc2LjEzNCAyMzMuNzc3IDc2LjU2MjRDMjMzLjc3NSA3Ni45OTE3IDIzMy4zMTggNzcuMjA0MiAyMzIuNDM0IDc3LjE5OTRDMjMxLjM2MiA3Ny4xMzk5IDIyOS43NTQgNzcuMDIzOCAyMjcuNzUxIDc1LjY5ODlMMjI2LjEyNCA3OS4yODQyQzIyNy42MTkgODAuMzkxMyAyMzAuMjE1IDgxLjA0ODUgMjMyLjUyIDgxLjA2MUMyMzUuNzEgODEuMDc4MiAyMzguNjkxIDc5Ljg2MDggMjM4LjcwOSA3Ni41ODgzQzIzOC43MjggNzMuMDc1OSAyMzUuNDA5IDcyLjI4MDEgMjMyLjY0OSA3Mi4xODU2Wk0xOTUuOTEgNjYuOTQ2OUMxOTQuNTE2IDY2LjkxMjMgMTkyLjg1MiA2Ny4zODU4IDE5MS43MTkgNjguNjkzOUwxOTEuNTEzIDY3LjI0NDhMMTg3LjE0NCA2Ny4yMjEyTDE4Ny4wNzMgODAuNDdMMTkxLjk1MSA4MC40OTU5TDE5MS45ODggNzMuNTIzQzE5MS45OTcgNzEuNzc5OCAxOTMuMSA3MC45ODA2IDE5NC4yOCA3MC45ODczQzE5NS4xOTEgNzAuOTkyMSAxOTYuMTI2IDcxLjU2MDYgMTk2LjExOCA3My4xOTYzTDE5Ni4wNzggODAuNTE4NEwyMDEuMDEgODAuNTQ0OEwyMDEuMDQ5IDczLjE5NjhDMjAxLjA3NCA2OC40NzU3IDE5OC42OTcgNjYuOTg4NiAxOTUuOTEgNjYuOTQ2OVpNMTU0LjEwNSA2Ni43NTAyQzE1MC4yNzIgNjYuNzI5NiAxNDYuNTM2IDY4Ljc0NzYgMTQ2LjUxIDczLjY1NTRDMTQ2LjQ4NCA3OC40ODI2IDE1MC4yMjUgODAuNTk1MiAxNTQuMDMxIDgwLjYxNTNDMTU3Ljc1NyA4MC42MzU1IDE2MS42IDc4LjU2MzIgMTYxLjYyNiA3My43MzZDMTYxLjY1MiA2OC45MDg4IDE1OC4wMTggNjYuNzcwOCAxNTQuMTA1IDY2Ljc1MDJaTTE1NC4wNTIgNzYuNTY1MkMxNTIuMzEgNzYuNTU2MSAxNTEuMzI2IDc1LjIwOTYgMTUxLjMzNCA3My42ODEzQzE1MS4zNDIgNzIuMTUzIDE1Mi4zNDEgNzAuNzkwMiAxNTQuMDgzIDcwLjc5OTNDMTU1LjgyNSA3MC44MDg0IDE1Ni44MDkgNzIuMTgxOCAxNTYuODAxIDczLjcxMDFDMTU2Ljc5MyA3NS4zMiAxNTUuNzE0IDc2LjU3NDQgMTU0LjA1MiA3Ni41NjUyWk0xMTcuMjg2IDc2LjI2MTZDMTE1LjQxIDc2LjI1MTUgMTE0LjQyNiA3NC45NTkyIDExNC40MzMgNzMuNTExQzExNC40NDMgNzEuODQ3OSAxMTUuNDY4IDcwLjQ4NjEgMTE3LjM0NCA3MC40OTYxQzExOC4yMjkgNzAuNTAwOSAxMTguOTc4IDcwLjc5OTMgMTE5LjYxNyA3MS40NzMzTDEyMi4yNTkgNjguNjQ1QzEyMC44NzMgNjcuMjQzMyAxMTguOTczIDY2LjU2MjYgMTE3LjA3MSA2Ni41NTI1QzExMy4zNDUgNjYuNTMyNCAxMDkuNjM1IDY4LjYzMTYgMTA5LjYwOSA3My40NTg3QzEwOS41ODMgNzguNDE5OCAxMTMuMjE4IDgwLjM0MzggMTE3LjA3NyA4MC4zNjQ0QzExOS4wNjEgODAuMzc1IDEyMC45NjggNzkuNTUzOCAxMjIuNTU3IDc4LjE0MUwxMTkuNzU4IDc1LjE3NTZDMTE5LjA4NCA3NS44OTYxIDExOC4xOTggNzYuMjY2NCAxMTcuMjg2IDc2LjI2MTZaTTI3MS40NTMgNzcuMTY2M0MyNzAuNzAzIDc3LjE2MjUgMjcwLjE2OSA3Ni44MTA5IDI3MC4xNDYgNzUuODcyMUwyNzAuMTY5IDcxLjUyNzVMMjczLjE3MSA3MS41NDMzTDI3My4xOTIgNjcuNzYyM0wyNzAuMjE2IDY3Ljc0NjVMMjcwLjIzNyA2My45MTEzTDI2NS4zMjkgNjQuNDIxN0wyNjUuMzExIDY3LjcyMDZMMjYzLjE5NCA2Ny43MDkxTDI2My4xNzQgNzEuNDkwMUwyNjUuMjkxIDcxLjUwMTZMMjY1LjI2OCA3NS44NDYyQzI2NS4xNjYgODAuMDAzMiAyNjcuNTE4IDgxLjIyMjYgMjcwLjE0NSA4MS4yMzY1QzI3MS41MTEgODEuMjQzNyAyNzIuODI2IDgxLjAwODcgMjczLjk1NSA4MC4zNzEyTDI3Mi45MDIgNzYuNzE4M0MyNzIuNDk5IDc2Ljk4NDUgMjcxLjkzNiA3Ny4xNjg3IDI3MS40NTMgNzcuMTY2M1pNNDk1LjA3NiA2OC44NjhMNDk0LjgyNyA3MC4yODg5QzQ5NC4xMzcgNjkuMjEyNSA0OTIuODI3IDY4LjU2MTUgNDkwLjk1MSA2OC41NTE5QzQ4Ny4wOTEgNjguNTMxMyA0ODQuNTAyIDcxLjUyMTIgNDg0LjQ4MSA3NS40MzY1QzQ4NC40NjEgNzkuMjk4NiA0ODYuNjE3IDgyLjA3MjYgNDkwLjUwMiA4Mi4zMzQ2QzQ5MS45NzUgODIuNDIzMyA0OTMuNzQ2IDgxLjk3NjcgNDk0Ljg3OSA4MC42OTU0TDQ5NS4wODYgODIuMTE3N0w0OTkuNjQyIDgyLjE0MjJMNDk5LjcxMyA2OC44OTM1TDQ5NS4wNzYgNjguODY4Wk00OTIuMDI0IDc4LjM3MjdDNDkwLjU1IDc4LjM2NTEgNDg5LjM3NiA3Ny4zMTI2IDQ4OS4zODYgNzUuNDYxOUM0ODkuMzk2IDczLjYxMTMgNDkwLjU4MSA3Mi41NDQ5IDQ5Mi4wNTUgNzIuNTUyNkM0OTMuNzk3IDcyLjU2MTcgNDk0Ljc4MyA3My43MjExIDQ5NC43NzQgNzUuNDkwN0M0OTQuNzY2IDc3LjA0NjQgNDkzLjY4NiA3OC4zODE0IDQ5Mi4wMjQgNzguMzcyN1pNNDU0LjMzNiA3MC4wOTg1TDQ1NC4wNDkgNjguNjQ4OEw0NDkuNjI3IDY4LjYyNTNMNDQ5LjU1NiA4MS44NzRMNDU0LjQ4NyA4MS45MDA0TDQ1NC41MjQgNzUuMDA3N0M0NTQuNTM0IDczLjI2NDUgNDU1LjU4MyA3Mi41MTkgNDU2LjgxNSA3Mi41MjU3QzQ1Ny42NDcgNzIuNTMgNDU4LjIzNiA3Mi42OTQ2IDQ1OS4wMzYgNzMuMzQyMkw0NjEuMDM4IDY5Ljc4NTdDNDYwLjE4NiA2OC44Njk1IDQ1OC45MDIgNjguMzUyOCA0NTcuNTYyIDY4LjM0NTdDNDU2LjI3NiA2OC4zMzg5IDQ1NS4wMzkgNjguODY5IDQ1NC4zMzYgNzAuMDk4NVpNNDE2LjU4OCA2OC4xNTM4QzQxMi43NTUgNjguMTMzMSA0MDkuMDE5IDcwLjE1MTIgNDA4Ljk5MyA3NS4wNTlDNDA4Ljk2NyA3OS44ODYyIDQxMi43MDggODEuOTk4OCA0MTYuNTE0IDgyLjAxODlDNDIwLjI0IDgyLjAzOTEgNDI0LjA4MyA3OS45NjY4IDQyNC4xMDkgNzUuMTM5NkM0MjQuMTM1IDcwLjMxMjkgNDIwLjUwMSA2OC4xNzQ5IDQxNi41ODggNjguMTUzOFpNNDE2LjUzNSA3Ny45Njg4QzQxNC43OTMgNzcuOTU5NyA0MTMuODA5IDc2LjYxMzIgNDEzLjgxNyA3NS4wODQ5QzQxMy44MjUgNzMuNTU2NiA0MTQuODI0IDcyLjE5MzggNDE2LjU2NiA3Mi4yMDI5QzQxOC4zMDggNzIuMjEyIDQxOS4yOTMgNzMuNTg1NCA0MTkuMjg1IDc1LjExMzdDNDE5LjI3NyA3Ni43MjM1IDQxOC4xOTcgNzcuOTc4IDQxNi41MzUgNzcuOTY4OFpNMzgyLjI4OCA3Ny43NTg3QzM4MS41MzggNzcuNzU0OSAzODEuMDA0IDc3LjQwMzMgMzgwLjk4MiA3Ni40NjQ1TDM4MS4wMDUgNzIuMTE5OUwzODQuMDA2IDcyLjEzNTdMMzg0LjAyNiA2OC4zNTQ4TDM4MS4wNTIgNjguMzM4OUwzODEuMDcyIDY0LjUwMzhMMzc2LjE2NSA2NS4wMTQyTDM3Ni4xNDcgNjguMzEzTDM3NC4wMyA2OC4zMDE1TDM3NC4wMDkgNzIuMDgyNUwzNzYuMTI3IDcyLjA5NEwzNzYuMTA0IDc2LjQzODZDMzc2LjAwMiA4MC41OTU3IDM3OC4zNTQgODEuODE1IDM4MC45OCA4MS44MjlDMzgyLjM0NyA4MS44MzYyIDM4My42NjIgODEuNjAxMSAzODQuNzkxIDgwLjk2MzZMMzgzLjczOCA3Ny4zMTA3QzM4My4zMzQgNzcuNTc3NCAzODIuNzcxIDc3Ljc2MTYgMzgyLjI4OCA3Ny43NTg3Wk0zNDMuODQ2IDc1LjExMzJDMzQzLjgzNyA3Ni44NTY0IDM0Mi43MzQgNzcuNTc0NSAzNDEuNTU1IDc3LjU2ODNDMzQwLjY0NCA3Ny41NjM1IDMzOS43MDkgNzYuOTk1MSAzMzkuNzE3IDc1LjM1OTNMMzM5Ljc1NyA2OC4wMzcyTDMzNC44MjUgNjguMDEwOEwzMzQuNzg2IDc1LjM1OThDMzM0Ljc2IDgwLjA3OTUgMzM3LjEzOCA4MS41Njc1IDMzOS45MjUgODEuNjA5N0MzNDEuMzE4IDgxLjY0MzMgMzQyLjk4MyA4MS4xNjk5IDM0NC4xMTUgNzkuODYxN0wzNDQuMzIyIDgxLjMxMDlMMzQ4LjY5MSA4MS4zMzQ0TDM0OC43NjIgNjguMDg1N0wzNDMuODg0IDY4LjA1OThMMzQzLjg0NiA3NS4xMTMyWk0zMDMuNzMzIDY5LjI5MzFMMzAzLjQ0NiA2Ny44NDM0TDI5OS4wMjQgNjcuODE5OUwyOTguOTUzIDgxLjA2ODZMMzAzLjg4NCA4MS4wOTVMMzAzLjkyMSA3NC4yMDIzQzMwMy45MyA3Mi40NTkgMzA0Ljk4IDcxLjcxMzYgMzA2LjIxMyA3MS43MjAzQzMwNy4wNDQgNzEuNzI0NiAzMDcuNjMzIDcxLjg4OTIgMzA4LjQzNCA3Mi41MzY4TDMxMC40MzUgNjguOTgwM0MzMDkuNTgzIDY4LjA2NDEgMzA4LjI5OSA2Ny41NDc0IDMwNi45NTkgNjcuNTQwMkMzMDUuNjczIDY3LjUzMzUgMzA0LjQzNyA2OC4wNjM2IDMwMy43MzMgNjkuMjkzMVoiIGZpbGw9IiM1NzU3NTYiLz4NCjwvc3ZnPg0K" alt="Metrocasa" style="height:30px;width:auto"></div>'
@@ -2072,34 +2177,34 @@ function montarExportHTML(propNum){
  +'</div>'
  +(g('entregacond').value?'<div class="pv-note" style="font-style:normal;font-size:10px;color:#555;margin-top:6px"><b>Piso / Documentação:</b> '+esc(g('entregacond').value)+'</div>':'')
 
+ /* setor — proponentes (entre Empreendimento e Resumo) */
+ +'<div class="pv-h2">Proponentes</div>'
+ +'<table class="pv-table"><thead><tr><th>Nome</th><th>CPF</th><th>Profissão</th><th>Renda</th></tr></thead><tbody>'+(buyersRows||'<tr><td colspan="4">—</td></tr>')+'</tbody></table>'
+ +'<div class="pv-note" style="font-style:normal">Renda total: <b>'+esc(sv(g('rendatot').textContent))+'</b>'+(subsidioVal>0?' &nbsp;·&nbsp; Subsídio: <b>'+nb(subsidioVal)+'</b>':'')+(fgtsOn()?' &nbsp;·&nbsp; FGTS':'')+(sbpe?' &nbsp;·&nbsp; SBPE':'')+'</div>'
+ +fiadorHTML
+
  /* setor 2 — resumo: valores, parâmetros e o que está fora */
  +'<div class="pv-h2">Resumo</div>'
  +'<div class="pv-grid4">'
  +'<div class="pv-box"><div class="k">Valor de tabela</div><div class="v">'+esc(sv(g('tab').value)||'—')+'</div></div>'
  +'<div class="pv-box"><div class="k">Desconto</div><div class="v">'+esc(g('desc').value||'0%')+'</div></div>'
- +'<div class="pv-box" style="background:#1F1F22"><div class="k" style="color:#B9B6B0">Valor de venda (VGV)</div><div class="v" style="color:#fff">'+esc(sv(g('venda').value)||'—')+'</div></div>'
+ +'<div class="pv-box" style="background:#1F1F22"><div class="k" style="color:#B9B6B0">Valor de venda (VGV)</div><div class="v" style="color:#fff">'+esc(sv(g('venda').value)||'—')+'</div>'+(vgvM2>0?'<div style="font-size:8.5px;color:#B9B6B0;margin-top:1px">'+nb(vgvM2)+'/m²</div>':'')+'</div>'
  +'<div class="pv-box"><div class="k">Financiamento</div><div class="v">'+finLab+'</div></div>'
  +'<div class="pv-box"><div class="k">Garantido</div><div class="v">'+esc(sv(g('gar').textContent))+' <span style="font-size:9px;color:#888">('+g('pctgar').textContent+')</span></div></div>'
  +'<div class="pv-box"><div class="k" style="color:#1B4C8C">Pré-chaves</div><div class="v" style="color:#1B4C8C">'+esc(sv(g('pre').textContent))+' <span style="font-size:9px">('+g('pctpre').textContent+')</span></div></div>'
  +'<div class="pv-box"><div class="k" style="color:#9A5B0A">Pós-chaves</div><div class="v" style="color:#9A5B0A">'+(psPos>0?nb(psPos):'—')+' <span style="font-size:9px">('+(venda?pctPosV.toFixed(1).replace('.',',')+'%':'—')+')</span></div></div>'
  +'<div class="pv-box"><div class="k">Entrada total</div><div class="v">'+(entradaTot?nb(entradaTot):'—')+'</div></div>'
- +'<div class="pv-box"><div class="k" style="color:#1B4C8C">Mensal na obra (pré-chaves)</div><div class="v" style="color:#1B4C8C">'+(mObra?nb(mObra)+'/mês':'—')+'</div></div>'
+ +'<div class="pv-box"><div class="k" style="color:#1B4C8C">Mensal na obra (pré-chaves)</div><div class="v" style="color:#1B4C8C">'+(mObra?nb(mObra)+'/mês':'—')+'</div>'+(mObrigVal>0?'<div style="font-size:8px;color:#888;margin-top:1px">2 primeiras (obrig.): '+nb(mObrigVal)+'</div>':'')+'</div>'
  +'<div class="pv-box"><div class="k" style="color:#9A5B0A">Mensal pós-chaves</div><div class="v" style="color:#9A5B0A">'+(mPos?nb(mPos)+'/mês':'—')+'</div></div>'
  +'<div class="pv-box"><div class="k">Soma do fluxo</div><div class="v">'+nb(somaCalc)+'</div></div>'
  +'<div class="pv-box"><div class="k">Fiador</div><div class="v" style="font-size:11px">'+(temFiador?esc(g('fiador_tipo').value):'SEM FIADOR')+'</div></div>'
  +'</div>'
  +(function(){var er=SEL_UNIT?evObraRange(g('empreend').value,rendaTot(),fluxFinCEF(),SEL_UNIT.terreno):null;
-   return er?'<div class="pv-note" style="font-style:normal;font-size:10px;color:#555;margin-top:6px"><b>Evolução de obra ('+er.n+' meses):</b> 1ª parcela '+nb(er.min)+' ('+mesAno_(er.ini)+') · última '+nb(er.max)+' ('+mesAno_(er.fim)+')</div>':''})()
+   return er?'<div style="font-family:-apple-system,sans-serif;font-size:10px;color:#1B4C8C;background:#F5F8FD;border-left:3px solid #1B4C8C;border-radius:5px;padding:6px 10px;margin-top:6px"><b>Evolução de obra:</b> 1ª parcela '+nb(er.min)+' · última '+nb(er.max)+'</div>':''})()
  +faltaHTML
  +(somaDivergente&&!faltouValor?'<div class="pv-warn">⚠ A soma do fluxo ('+nb(somaCalc)+') excede o valor de venda ('+nb(vendaNum)+') em '+nb(Math.abs(faltaFinal))+'. Revise o fluxo antes de enviar.</div>':'')
  +pendHTML
  +parcHTML
-
- /* setor 3 — proponentes */
- +'<div class="pv-h2">Proponentes</div>'
- +'<table class="pv-table"><thead><tr><th>Nome</th><th>CPF</th><th>Profissão</th><th>Renda</th></tr></thead><tbody>'+(buyersRows||'<tr><td colspan="4">—</td></tr>')+'</tbody></table>'
- +'<div class="pv-note" style="font-style:normal">Renda total: <b>'+esc(sv(g('rendatot').textContent))+'</b>'+(subsidioVal>0?' &nbsp;·&nbsp; Subsídio: <b>'+nb(subsidioVal)+'</b>':'')+(fgtsOn()?' &nbsp;·&nbsp; FGTS':'')+(sbpe?' &nbsp;·&nbsp; SBPE':'')+'</div>'
- +fiadorHTML
 
  /* setor 4 — fluxo */
  +'<div class="pv-h2">Fluxo <span class="pv-tag pre" style="margin-left:6px">PRÉ</span> <span class="pv-tag pos">PÓS</span></div>'
@@ -2121,7 +2226,8 @@ function snapshotProposta(){
    fgts:b.querySelector('.bfgts').value}});
  var fluxo=Array.prototype.map.call(document.querySelectorAll('#flux .prow'),function(r){
   return{tipo:r.querySelector('.ptipo').value,qtd:r.querySelector('.pqtd').value,
-   valor:cur(r.querySelector('.pvalor').value),data:r.querySelector('.pdata').value}});
+   valor:cur(r.querySelector('.pvalor').value),data:r.querySelector('.pdata').value,
+   acr:r.dataset.acr?1:0,acrbase:r.dataset.acrbase||null}});
  var checklist=Array.prototype.map.call(document.querySelectorAll('#chk-card .vrow'),function(r){
   return{ok:r.querySelector('.tick').textContent!=='!',item:r.querySelector('.lab').textContent}});
  return{buyers:buyers,fluxo:fluxo,checklist:checklist,
@@ -2147,6 +2253,17 @@ function propostaNum(p){
  var ano=new Date(p.criado_em).getFullYear();
  return ano+'-'+String(p.id).padStart(4,'0')}
 async function exportarProposta(){
+ /* trava: não imprime enquanto houver pendências no checklist */
+ calc();
+ if(!window.PROPOSTA_OK){
+  var pend=[].slice.call(document.querySelectorAll('#chk-card .vrow.fail'))
+    .filter(function(r){return r.id!=='chk_aprov'})
+    .map(function(r){return '• '+r.querySelector('.lab').textContent});
+  alert('A proposta ainda tem pendências e não pode ser impressa:\n\n'
+    +(pend.join('\n')||'(verifique o checklist)')
+    +'\n\nResolva os itens do checklist e tente novamente.');
+  return;
+ }
  var num=null;
  try{var p=await salvarProposta();num=propostaNum(p)}
  catch(e){console.error('erro ao registrar proposta',e);
